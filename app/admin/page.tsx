@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { PencilLine, Plus, Trash2, UtensilsCrossed } from 'lucide-react';
+import { Eye, EyeOff, PencilLine, Plus, Trash2, UtensilsCrossed } from 'lucide-react';
 import { addMenuItem, deleteMenuItem, updateMenuItem } from '@/lib/actions';
 import { supabase } from '@/lib/supabase';
 
@@ -37,6 +37,7 @@ export default function AdminPage() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [togglingId, setTogglingId] = useState<number | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -146,6 +147,30 @@ export default function AdminPage() {
     }
   };
 
+  const handleToggleVisibility = async (item: MenuItem) => {
+    if (!supabase) {
+      return;
+    }
+
+    const nextValue = !item.is_available;
+    const previousValue = item.is_available;
+
+    setItems((current) =>
+      current.map((currentItem) => (currentItem.id === item.id ? { ...currentItem, is_available: nextValue } : currentItem))
+    );
+    setTogglingId(item.id);
+
+    const { error } = await supabase.from('menu_items').update({ is_available: nextValue }).eq('id', item.id);
+
+    if (error) {
+      setItems((current) =>
+        current.map((currentItem) => (currentItem.id === item.id ? { ...currentItem, is_available: previousValue } : currentItem))
+      );
+    }
+
+    setTogglingId(null);
+  };
+
   return (
     <main dir="rtl" className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-800 p-4 text-right text-slate-100 sm:p-6 lg:p-8">
       <div className="mx-auto flex max-w-6xl flex-col gap-6">
@@ -198,6 +223,18 @@ export default function AdminPage() {
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => handleToggleVisibility(item)}
+                        disabled={togglingId === item.id}
+                        className={`rounded-xl border p-2 transition ${
+                          item.is_available
+                            ? 'border-emerald-400/30 bg-emerald-500/10 text-emerald-300 hover:bg-emerald-500/20'
+                            : 'border-slate-500/30 bg-slate-500/10 text-slate-300 hover:bg-slate-500/20'
+                        } ${togglingId === item.id ? 'opacity-60' : ''}`}
+                        aria-label={item.is_available ? `إخفاء ${item.name}` : `إظهار ${item.name}`}
+                      >
+                        {item.is_available ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
+                      </button>
                       <button
                         onClick={() => handleEdit(item)}
                         className="rounded-xl border border-sky-400/30 bg-sky-500/10 p-2 text-sky-300 transition hover:bg-sky-500/20"
