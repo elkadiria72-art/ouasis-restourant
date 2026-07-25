@@ -226,7 +226,7 @@ export default function AdminPage() {
                       <button
                         onClick={() => handleToggleVisibility(item)}
                         disabled={togglingId === item.id}
-                        className={`rounded-xl border p-2 transition ${
+                        className={`flex items-center gap-1 rounded-xl border px-2.5 py-2 text-sm transition ${
                           item.is_available
                             ? 'border-emerald-400/30 bg-emerald-500/10 text-emerald-300 hover:bg-emerald-500/20'
                             : 'border-slate-500/30 bg-slate-500/10 text-slate-300 hover:bg-slate-500/20'
@@ -234,6 +234,7 @@ export default function AdminPage() {
                         aria-label={item.is_available ? `إخفاء ${item.name}` : `إظهار ${item.name}`}
                       >
                         {item.is_available ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
+                        <span>{item.is_available ? 'إخفاء' : 'إظهار'}</span>
                       </button>
                       <button
                         onClick={() => handleEdit(item)}
