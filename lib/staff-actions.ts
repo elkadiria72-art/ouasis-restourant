@@ -1,3 +1,5 @@
+'use server';
+
 import { getSupabaseClient } from '@/lib/supabase';
 
 export type StaffRole = 'Waiter' | 'Kitchen' | 'Staff';

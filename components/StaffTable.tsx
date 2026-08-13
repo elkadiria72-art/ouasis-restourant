@@ -57,7 +57,7 @@ export default function StaffTable({ staff, onRoleChange, onToggleStatus }: Staf
                       ? 'bg-green-500/15 text-green-300 ring-1 ring-green-400/50'
                       : 'bg-slate-500/15 text-slate-300 ring-1 ring-slate-400/50'
                   }`}>
-                    {member.status === 'online' ? <CheckCircle2 size={13} /> : <Circle size={13} />}
+                    {member.status === 'online' ? <CircleCheckBig size={13} /> : <Circle size={13} />}
                     {member.status === 'online' ? 'Online' : 'Offline'}
                   </span>
                 </td>

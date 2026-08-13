@@ -41,8 +41,6 @@ export async function generateQRCode(tableId: number, tableNumber: number) {
     // Generate QR code as data URL (PNG)
     const qrImageUrl = await QRCode.toDataURL(qrData, {
       errorCorrectionLevel: 'H',
-      type: 'image/png',
-      quality: 0.95,
       margin: 2,
       width: 300,
     });
@@ -86,8 +84,6 @@ export async function generateAllQRCodes() {
         const qrData = `${process.env.NEXT_PUBLIC_APP_URL}/menu?table=${table.id}`;
         const qrImageUrl = await QRCode.toDataURL(qrData, {
           errorCorrectionLevel: 'H',
-          type: 'image/png',
-          quality: 0.95,
           margin: 2,
           width: 300,
         });

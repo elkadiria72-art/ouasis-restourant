@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import { Save, Store, Palette, Languages, CreditCard } from 'lucide-react';
-import { defaultSettings, fetchRestaurantSettings, saveRestaurantSettings, type RestaurantSettings } from '@/lib/settings-actions';
+import { defaultSettings } from '@/lib/settings-types';
+import { fetchRestaurantSettings, saveRestaurantSettings, type RestaurantSettings } from '@/lib/settings-actions';
 
 export default function SettingsPage() {
   const [settings, setSettings] = useState<RestaurantSettings>(defaultSettings);
