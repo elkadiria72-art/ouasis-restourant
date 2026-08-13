@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { AlertCircle, RefreshCw } from 'lucide-react';
 import OrdersFilters from '@/components/OrdersFilters';
 import OrderCards from '@/components/OrderCards';
@@ -8,6 +8,8 @@ import OrderDetails from '@/components/OrderDetails';
 import { fetchOrders } from '@/lib/orders-actions';
 import { useAdminSearch } from '@/components/AdminSearchContext';
 import { matchesSearch } from '@/lib/search-utils';
+import { useNotificationSounds } from '@/components/useNotificationSounds';
+import { playSoundUrl } from '@/lib/play-sound';
 import { ar } from '@/lib/ar';
 
 interface Order {
@@ -21,6 +23,7 @@ interface Order {
 
 export default function OrdersPage() {
   const { query } = useAdminSearch();
+  const { newOrderSoundUrl } = useNotificationSounds();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -28,13 +31,27 @@ export default function OrdersPage() {
   const [status, setStatus] = useState('all');
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const knownNewOrderIds = useRef<Set<number>>(new Set());
+  const isInitialLoad = useRef(true);
 
   const loadOrders = async () => {
     try {
       setLoading(true);
       setError(null);
       const data = await fetchOrders({ dateRange, status: status === 'all' ? undefined : status });
-      setOrders(data || []);
+      const list = data || [];
+      const newOrders = list.filter((o) => o.status === 'new');
+
+      if (!isInitialLoad.current) {
+        const hasFreshNew = newOrders.some((o) => !knownNewOrderIds.current.has(o.id));
+        if (hasFreshNew) {
+          void playSoundUrl(newOrderSoundUrl);
+        }
+      }
+
+      knownNewOrderIds.current = new Set(newOrders.map((o) => o.id));
+      isInitialLoad.current = false;
+      setOrders(list);
     } catch (err) {
       setError((err as Error).message || 'فشل تحميل الطلبات');
     } finally {
@@ -49,6 +66,8 @@ export default function OrdersPage() {
   };
 
   useEffect(() => {
+    isInitialLoad.current = true;
+    knownNewOrderIds.current = new Set();
     loadOrders();
   }, [dateRange, status]);
 

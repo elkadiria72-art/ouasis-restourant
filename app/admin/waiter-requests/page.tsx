@@ -1,12 +1,14 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { Bell, AlertCircle, RefreshCw } from 'lucide-react';
 import WaiterRequestCards from '@/components/WaiterRequestCards';
 import WaiterRequestDetails from '@/components/WaiterRequestDetails';
 import { fetchWaiterRequests } from '@/lib/waiter-actions';
 import { useAdminSearch } from '@/components/AdminSearchContext';
 import { matchesSearch } from '@/lib/search-utils';
+import { useNotificationSounds } from '@/components/useNotificationSounds';
+import { playSoundUrl } from '@/lib/play-sound';
 import { ar, formatNumberAr } from '@/lib/ar';
 
 interface WaiterRequest {
@@ -22,25 +24,32 @@ interface WaiterRequest {
 
 export default function WaiterRequestsPage() {
   const { query } = useAdminSearch();
+  const { waiterCallSoundUrl } = useNotificationSounds();
   const [requests, setRequests] = useState<WaiterRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedRequest, setSelectedRequest] = useState<WaiterRequest | null>(null);
   const [statusFilter, setStatusFilter] = useState<'all' | 'new' | 'accepted' | 'resolved'>('all');
   const [refreshing, setRefreshing] = useState(false);
-  const [hasPlayedSound, setHasPlayedSound] = useState(false);
+  const knownNewRequestIds = useRef<Set<number>>(new Set());
+  const isInitialLoad = useRef(true);
 
   const loadRequests = async () => {
     try {
       setLoading(true);
       setError(null);
       const data = await fetchWaiterRequests(statusFilter === 'all' ? undefined : statusFilter);
-      setRequests(data || []);
+      const list = data || [];
+      const newOnes = list.filter((r: WaiterRequest) => r.status === 'new');
 
-      if (!hasPlayedSound && data && data.some((r: WaiterRequest) => r.status === 'new')) {
-        playNotificationSound();
-        setHasPlayedSound(true);
+      if (!isInitialLoad.current) {
+        const hasFresh = newOnes.some((r) => !knownNewRequestIds.current.has(r.id));
+        if (hasFresh) void playSoundUrl(waiterCallSoundUrl);
       }
+
+      knownNewRequestIds.current = new Set(newOnes.map((r) => r.id));
+      isInitialLoad.current = false;
+      setRequests(list);
     } catch (err) {
       setError((err as Error).message || 'فشل تحميل الطلبات');
       console.error(err);
@@ -49,29 +58,9 @@ export default function WaiterRequestsPage() {
     }
   };
 
-  const playNotificationSound = () => {
-    try {
-      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
-      const oscillator = audioContext.createOscillator();
-      const gainNode = audioContext.createGain();
-
-      oscillator.connect(gainNode);
-      gainNode.connect(audioContext.destination);
-
-      oscillator.frequency.value = 800;
-      oscillator.type = 'sine';
-
-      gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
-      gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
-
-      oscillator.start(audioContext.currentTime);
-      oscillator.stop(audioContext.currentTime + 0.5);
-    } catch (err) {
-      console.log('Audio notification not available');
-    }
-  };
-
   useEffect(() => {
+    isInitialLoad.current = true;
+    knownNewRequestIds.current = new Set();
     loadRequests();
   }, [statusFilter]);
 
@@ -83,7 +72,7 @@ export default function WaiterRequestsPage() {
     }, 10000);
 
     return () => clearInterval(interval);
-  }, [statusFilter, hasPlayedSound]);
+  }, [statusFilter, waiterCallSoundUrl]);
 
   const filteredRequests = useMemo(
     () =>

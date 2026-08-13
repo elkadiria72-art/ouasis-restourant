@@ -1,17 +1,23 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { Save, Store, Palette, Languages } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { Save, Store, Palette, Languages, Upload, Volume2 } from 'lucide-react';
 import { defaultSettings } from '@/lib/settings-types';
 import { fetchRestaurantSettings, saveRestaurantSettings, type RestaurantSettings } from '@/lib/settings-actions';
+import { uploadRestaurantAsset, type AssetUploadType } from '@/lib/storage-actions';
 import { ar } from '@/lib/ar';
 
 export default function SettingsPage() {
   const [settings, setSettings] = useState<RestaurantSettings>(defaultSettings);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState<AssetUploadType | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+
+  const logoInputRef = useRef<HTMLInputElement>(null);
+  const newOrderSoundRef = useRef<HTMLInputElement>(null);
+  const waiterSoundRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const load = async () => {
@@ -31,6 +37,34 @@ export default function SettingsPage() {
 
   const handleChange = (field: keyof RestaurantSettings, value: string) => {
     setSettings((current) => ({ ...current, [field]: value }));
+  };
+
+  const handleFileUpload = async (file: File, type: AssetUploadType) => {
+    setUploading(type);
+    setError(null);
+    setSuccess(null);
+
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('type', type);
+      const publicUrl = await uploadRestaurantAsset(formData);
+
+      const fieldMap: Record<AssetUploadType, keyof RestaurantSettings> = {
+        logo: 'logo_url',
+        new_order_sound: 'new_order_sound_url',
+        waiter_call_sound: 'waiter_call_sound_url',
+      };
+
+      const updated = { ...settings, [fieldMap[type]]: publicUrl };
+      setSettings(updated);
+      await saveRestaurantSettings(updated);
+      setSuccess('تم رفع الملف وحفظ الرابط بنجاح.');
+    } catch (err) {
+      setError((err as Error).message || 'فشل رفع الملف');
+    } finally {
+      setUploading(null);
+    }
   };
 
   const handleSubmit = async (event: React.FormEvent) => {
@@ -63,7 +97,7 @@ export default function SettingsPage() {
       <div className="text-right">
         <h1 className="text-2xl font-bold text-white sm:text-3xl">إعدادات المطعم</h1>
         <p className="mt-1 text-sm text-slate-400">
-          اضبط ملف المطعم وإعدادات المنيو الافتراضية وهوية رموز QR.
+          اضبط ملف المطعم ورفع الشعار والأصوات المخصصة للإشعارات.
         </p>
       </div>
 
@@ -95,16 +129,41 @@ export default function SettingsPage() {
               />
             </label>
 
-            <label className="block">
-              <span className="mb-2 block text-sm text-slate-300">رابط الشعار</span>
+            <div className="block">
+              <span className="mb-2 block text-sm text-slate-300">شعار المطعم</span>
               <input
-                dir="ltr"
-                value={settings.logo_url}
-                onChange={(event) => handleChange('logo_url', event.target.value)}
-                className="w-full rounded-lg border border-slate-600 bg-slate-900 px-3 py-2.5 text-white outline-none focus:border-amber-600"
-                placeholder="https://..."
+                ref={logoInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) handleFileUpload(file, 'logo');
+                  e.target.value = '';
+                }}
               />
-            </label>
+              <button
+                type="button"
+                disabled={uploading === 'logo'}
+                onClick={() => logoInputRef.current?.click()}
+                className="flex w-full items-center justify-center gap-2 rounded-lg border border-dashed border-slate-600 bg-slate-900 px-3 py-3 text-sm text-slate-300 transition-colors hover:border-amber-600 disabled:opacity-50"
+              >
+                <Upload size={18} />
+                {uploading === 'logo' ? 'جاري الرفع...' : 'اختر صورة الشعار'}
+              </button>
+              {settings.logo_url && (
+                <div className="mt-3 flex items-center gap-3">
+                  <img
+                    src={settings.logo_url}
+                    alt="الشعار"
+                    className="h-14 w-14 rounded-lg border border-slate-600 object-cover"
+                  />
+                  <span className="truncate text-xs text-slate-500" dir="ltr">
+                    {settings.logo_url}
+                  </span>
+                </div>
+              )}
+            </div>
 
             <label className="block md:col-span-2">
               <span className="mb-2 block text-sm text-slate-300">الوصف</span>
@@ -145,6 +204,69 @@ export default function SettingsPage() {
                 className="w-full rounded-lg border border-slate-600 bg-slate-900 px-3 py-2.5 text-white outline-none focus:border-amber-600"
               />
             </label>
+          </div>
+        </div>
+
+        <div className="rounded-xl border border-slate-700 bg-slate-800 p-5">
+          <div className="mb-5 flex items-center justify-end gap-3">
+            <h2 className="text-xl font-semibold text-white">أصوات الإشعارات</h2>
+            <Volume2 className="text-emerald-500" size={20} />
+          </div>
+
+          <div className="grid gap-6 md:grid-cols-2">
+            <div>
+              <span className="mb-2 block text-sm text-slate-300">صوت طلب جديد</span>
+              <input
+                ref={newOrderSoundRef}
+                type="file"
+                accept="audio/*"
+                className="hidden"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) handleFileUpload(file, 'new_order_sound');
+                  e.target.value = '';
+                }}
+              />
+              <button
+                type="button"
+                disabled={uploading === 'new_order_sound'}
+                onClick={() => newOrderSoundRef.current?.click()}
+                className="flex w-full items-center justify-center gap-2 rounded-lg border border-dashed border-slate-600 bg-slate-900 px-3 py-3 text-sm text-slate-300 transition-colors hover:border-amber-600 disabled:opacity-50"
+              >
+                <Upload size={18} />
+                {uploading === 'new_order_sound' ? 'جاري الرفع...' : 'رفع صوت الطلب الجديد'}
+              </button>
+              {settings.new_order_sound_url && (
+                <audio controls src={settings.new_order_sound_url} className="mt-3 w-full" />
+              )}
+            </div>
+
+            <div>
+              <span className="mb-2 block text-sm text-slate-300">صوت نداء النادل</span>
+              <input
+                ref={waiterSoundRef}
+                type="file"
+                accept="audio/*"
+                className="hidden"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) handleFileUpload(file, 'waiter_call_sound');
+                  e.target.value = '';
+                }}
+              />
+              <button
+                type="button"
+                disabled={uploading === 'waiter_call_sound'}
+                onClick={() => waiterSoundRef.current?.click()}
+                className="flex w-full items-center justify-center gap-2 rounded-lg border border-dashed border-slate-600 bg-slate-900 px-3 py-3 text-sm text-slate-300 transition-colors hover:border-amber-600 disabled:opacity-50"
+              >
+                <Upload size={18} />
+                {uploading === 'waiter_call_sound' ? 'جاري الرفع...' : 'رفع صوت نداء النادل'}
+              </button>
+              {settings.waiter_call_sound_url && (
+                <audio controls src={settings.waiter_call_sound_url} className="mt-3 w-full" />
+              )}
+            </div>
           </div>
         </div>
 
@@ -251,7 +373,7 @@ export default function SettingsPage() {
         <div className="flex justify-start">
           <button
             type="submit"
-            disabled={saving}
+            disabled={saving || uploading !== null}
             className="inline-flex items-center gap-2 rounded-lg bg-amber-600 px-6 py-3 font-medium text-white transition-colors hover:bg-amber-700 disabled:cursor-not-allowed disabled:opacity-60"
           >
             <Save size={18} />

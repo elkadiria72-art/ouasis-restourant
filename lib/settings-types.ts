@@ -2,6 +2,8 @@ export interface RestaurantSettings {
   id?: string;
   restaurant_name: string;
   logo_url: string;
+  new_order_sound_url: string;
+  waiter_call_sound_url: string;
   description: string;
   phone: string;
   address: string;
@@ -19,6 +21,8 @@ export const defaultSettings: RestaurantSettings = {
   id: 'restaurant',
   restaurant_name: 'مطعم قـا أحمد',
   logo_url: '',
+  new_order_sound_url: '',
+  waiter_call_sound_url: '',
   description: 'تجربة مطعم مميزة بنكهات طازجة وضيافة دافئة.',
   phone: '+212 5 00 00 00 00',
   address: 'الدار البيضاء، المغرب',
@@ -31,3 +35,9 @@ export const defaultSettings: RestaurantSettings = {
   qr_text: 'امسح الرمز لعرض المنيو',
   font_family: 'Inter, sans-serif',
 };
+
+export const SETTINGS_URL_FIELDS = [
+  'logo_url',
+  'new_order_sound_url',
+  'waiter_call_sound_url',
+] as const;
