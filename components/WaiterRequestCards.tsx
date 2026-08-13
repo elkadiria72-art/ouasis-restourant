@@ -1,6 +1,7 @@
 'use client';
 
-import { Clock, CircleCheck, AlertCircle as AlertIcon } from 'lucide-react';
+import { Clock, CircleCheck } from 'lucide-react';
+import { ar, formatRelativeTimeAr } from '@/lib/ar';
 
 interface WaiterRequest {
   id: number;
@@ -26,10 +27,10 @@ const requestTypeColors = {
 };
 
 const requestTypeLabels = {
-  waiter: '👤 Waiter Needed',
-  bill: '💰 Bill Requested',
-  issue: '⚠️ Issue Reported',
-  other: '❓ Other Request',
+  waiter: '👤 نداء نادل',
+  bill: '💰 طلب الحساب',
+  issue: '⚠️ الإبلاغ عن مشكلة',
+  other: '❓ طلب آخر',
 };
 
 const statusColors = {
@@ -45,30 +46,16 @@ const statusEmoji = {
 };
 
 export default function WaiterRequestCards({ requests, onSelectRequest }: WaiterRequestCardsProps) {
-  const formatTime = (dateString: string) => {
-    const date = new Date(dateString);
-    const now = new Date();
-    const diffMs = now.getTime() - date.getTime();
-    const diffMins = Math.floor(diffMs / 60000);
-
-    if (diffMins < 1) return 'just now';
-    if (diffMins < 60) return `${diffMins} min ago`;
-
-    const diffHours = Math.floor(diffMins / 60);
-    return `${diffHours}h ago`;
-  };
-
   if (requests.length === 0) {
     return (
-      <div className="bg-gradient-to-br from-green-500/20 to-emerald-500/20 border border-green-500/50 rounded-lg p-12 text-center">
+      <div className="rounded-lg border border-green-500/50 bg-gradient-to-br from-green-500/20 to-emerald-500/20 p-12 text-center">
         <CircleCheck className="mx-auto mb-4 text-green-400" size={40} />
-        <p className="text-green-300 text-lg font-semibold">All caught up! 🎉</p>
-        <p className="text-green-400 text-sm mt-2">No pending waiter requests at the moment.</p>
+        <p className="text-lg font-semibold text-green-300">كل شيء تحت السيطرة! 🎉</p>
+        <p className="mt-2 text-sm text-green-400">لا توجد نداءات نادل معلّقة حالياً.</p>
       </div>
     );
   }
 
-  // Sort by status (new first, then accepted, then resolved)
   const sortedRequests = [...requests].sort((a, b) => {
     const statusOrder = { new: 0, accepted: 1, resolved: 2 };
     return statusOrder[a.status] - statusOrder[b.status];
@@ -79,29 +66,33 @@ export default function WaiterRequestCards({ requests, onSelectRequest }: Waiter
       {sortedRequests.map((request) => (
         <button
           key={request.id}
+          type="button"
           onClick={() => onSelectRequest(request)}
-          className={`text-left w-full p-5 rounded-lg border-2 transition-all hover:shadow-lg hover:shadow-amber-600/20 ${
+          className={`w-full rounded-lg border-2 p-5 text-right transition-all hover:shadow-lg hover:shadow-amber-600/20 ${
             request.status === 'new'
-              ? 'bg-red-500/10 border-red-500/30 animate-pulse'
-              : 'bg-slate-800 border-slate-700'
+              ? 'animate-pulse border-red-500/30 bg-red-500/10'
+              : 'border-slate-700 bg-slate-800'
           }`}
         >
           <div className="flex items-start justify-between gap-4">
-            {/* Left Section */}
-            <div className="flex-1 min-w-0">
-              {/* Status + Table */}
-              <div className="flex items-center gap-3 mb-3">
-                <span className="text-2xl">{statusEmoji[request.status]}</span>
-                <div>
-                  <p className="text-sm text-slate-400">Table</p>
+            <div
+              className={`rounded-lg px-3 py-2 text-sm font-semibold text-white ${statusColors[request.status]}`}
+            >
+              {ar.waiterStatus[request.status]}
+            </div>
+
+            <div className="min-w-0 flex-1">
+              <div className="mb-3 flex items-center justify-end gap-3">
+                <div className="text-right">
+                  <p className="text-sm text-slate-400">الطاولة</p>
                   <p className="text-2xl font-bold text-white">#{request.table_number}</p>
                 </div>
+                <span className="text-2xl">{statusEmoji[request.status]}</span>
               </div>
 
-              {/* Request Type Badge */}
               <div className="mb-3">
                 <span
-                  className={`inline-block px-3 py-1 rounded-full text-sm font-medium border ${
+                  className={`inline-block rounded-full border px-3 py-1 text-sm font-medium ${
                     requestTypeColors[request.request_type]
                   }`}
                 >
@@ -109,40 +100,32 @@ export default function WaiterRequestCards({ requests, onSelectRequest }: Waiter
                 </span>
               </div>
 
-              {/* Message */}
-              <p className="text-slate-200 font-medium mb-2 line-clamp-2">{request.message}</p>
+              <p className="mb-2 line-clamp-2 font-medium text-slate-200">{request.message}</p>
 
-              {/* Timing */}
-              <div className="flex items-center gap-4 text-xs text-slate-400">
+              <div className="flex flex-wrap items-center justify-end gap-4 text-xs text-slate-400">
                 <div className="flex items-center gap-1">
+                  <span>{formatRelativeTimeAr(request.created_at)}</span>
                   <Clock size={14} />
-                  <span>{formatTime(request.created_at)}</span>
                 </div>
 
                 {request.accepted_at && (
                   <div className="flex items-center gap-1 text-yellow-400">
-                    <span>✓ Accepted {formatTime(request.accepted_at)}</span>
+                    <span>✓ قُبل {formatRelativeTimeAr(request.accepted_at)}</span>
                   </div>
                 )}
 
                 {request.resolved_at && (
                   <div className="flex items-center gap-1 text-green-400">
-                    <span>✓✓ Resolved {formatTime(request.resolved_at)}</span>
+                    <span>✓✓ حُلّ {formatRelativeTimeAr(request.resolved_at)}</span>
                   </div>
                 )}
               </div>
             </div>
-
-            {/* Right Section - Status Badge */}
-            <div className={`px-3 py-2 rounded-lg text-white text-sm font-semibold capitalize ${statusColors[request.status]}`}>
-              {request.status}
-            </div>
           </div>
 
-          {/* Click Hint */}
           {request.status === 'new' && (
-            <div className="text-xs text-red-400 font-semibold mt-3">
-              ⚠️ URGENT - Click to respond
+            <div className="mt-3 text-xs font-semibold text-red-400">
+              ⚠️ عاجل — انقر للرد
             </div>
           )}
         </button>

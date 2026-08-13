@@ -1,10 +1,13 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { Bell, AlertCircle, RefreshCw, Filter } from 'lucide-react';
+import { useState, useEffect, useMemo } from 'react';
+import { Bell, AlertCircle, RefreshCw } from 'lucide-react';
 import WaiterRequestCards from '@/components/WaiterRequestCards';
 import WaiterRequestDetails from '@/components/WaiterRequestDetails';
 import { fetchWaiterRequests } from '@/lib/waiter-actions';
+import { useAdminSearch } from '@/components/AdminSearchContext';
+import { matchesSearch } from '@/lib/search-utils';
+import { ar, formatNumberAr } from '@/lib/ar';
 
 interface WaiterRequest {
   id: number;
@@ -18,6 +21,7 @@ interface WaiterRequest {
 }
 
 export default function WaiterRequestsPage() {
+  const { query } = useAdminSearch();
   const [requests, setRequests] = useState<WaiterRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -33,13 +37,12 @@ export default function WaiterRequestsPage() {
       const data = await fetchWaiterRequests(statusFilter === 'all' ? undefined : statusFilter);
       setRequests(data || []);
 
-      // Play sound if there are new requests
-      if (!hasPlayedSound && data && data.some((r: any) => r.status === 'new')) {
+      if (!hasPlayedSound && data && data.some((r: WaiterRequest) => r.status === 'new')) {
         playNotificationSound();
         setHasPlayedSound(true);
       }
     } catch (err) {
-      setError((err as Error).message || 'Failed to load requests');
+      setError((err as Error).message || 'فشل تحميل الطلبات');
       console.error(err);
     } finally {
       setLoading(false);
@@ -47,7 +50,6 @@ export default function WaiterRequestsPage() {
   };
 
   const playNotificationSound = () => {
-    // Using Web Audio API to create a notification sound
     try {
       const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
       const oscillator = audioContext.createOscillator();
@@ -73,7 +75,6 @@ export default function WaiterRequestsPage() {
     loadRequests();
   }, [statusFilter]);
 
-  // Auto-refresh every 10 seconds
   useEffect(() => {
     const interval = setInterval(async () => {
       setRefreshing(true);
@@ -84,6 +85,22 @@ export default function WaiterRequestsPage() {
     return () => clearInterval(interval);
   }, [statusFilter, hasPlayedSound]);
 
+  const filteredRequests = useMemo(
+    () =>
+      requests.filter((r) =>
+        matchesSearch(
+          query,
+          r.table_number,
+          r.message,
+          r.request_type,
+          r.status,
+          ar.waiterType[r.request_type],
+          ar.waiterStatus[r.status]
+        )
+      ),
+    [requests, query]
+  );
+
   const stats = {
     new: requests.filter((r) => r.status === 'new').length,
     accepted: requests.filter((r) => r.status === 'accepted').length,
@@ -92,87 +109,93 @@ export default function WaiterRequestsPage() {
 
   return (
     <div className="space-y-8">
-      {/* Header */}
-      <div className="flex items-center justify-between flex-wrap gap-4">
-        <div>
-          <h1 className="text-3xl font-bold text-white flex items-center gap-2">
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <div className="text-right">
+          <h1 className="flex items-center justify-end gap-2 text-2xl font-bold text-white sm:text-3xl">
+            {ar.nav.waiterRequests}
             <Bell className="text-red-500" size={32} />
-            Waiter Requests
           </h1>
-          <p className="text-slate-400 mt-1">Real-time customer service requests and calls.</p>
+          <p className="mt-1 text-sm text-slate-400">طلبات خدمة العملاء ونداءات النادل لحظياً.</p>
         </div>
         <button
+          type="button"
           onClick={() => loadRequests()}
           disabled={refreshing}
-          className="flex items-center gap-2 px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50"
+          className="flex items-center gap-2 rounded-lg bg-amber-600 px-4 py-2 font-medium text-white transition-colors hover:bg-amber-700 disabled:opacity-50"
         >
           <RefreshCw size={20} className={refreshing ? 'animate-spin' : ''} />
-          Refresh
+          {ar.refresh}
         </button>
       </div>
 
-      {/* Error */}
       {error && (
-        <div className="bg-red-500/20 border border-red-500/50 rounded-lg p-4 flex items-center gap-3">
+        <div className="flex items-center gap-3 rounded-lg border border-red-500/50 bg-red-500/20 p-4">
           <AlertCircle className="text-red-400" size={20} />
           <p className="text-red-300">{error}</p>
         </div>
       )}
 
-      {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="bg-red-500/20 border border-red-500/50 rounded-lg p-4">
-          <p className="text-slate-300 text-sm">New Requests</p>
-          <p className="text-3xl font-bold text-red-300">{stats.new}</p>
-          {stats.new > 0 && <p className="text-xs text-red-400 mt-1">⚠️ Action Required</p>}
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+        <div className="rounded-lg border border-red-500/50 bg-red-500/20 p-4 text-right">
+          <p className="text-sm text-slate-300">طلبات جديدة</p>
+          <p className="text-3xl font-bold text-red-300">{formatNumberAr(stats.new)}</p>
+          {stats.new > 0 && <p className="mt-1 text-xs text-red-400">⚠️ يتطلب إجراءً</p>}
         </div>
-        <div className="bg-yellow-500/20 border border-yellow-500/50 rounded-lg p-4">
-          <p className="text-slate-300 text-sm">Accepted</p>
-          <p className="text-3xl font-bold text-yellow-300">{stats.accepted}</p>
+        <div className="rounded-lg border border-yellow-500/50 bg-yellow-500/20 p-4 text-right">
+          <p className="text-sm text-slate-300">{ar.waiterStatus.accepted}</p>
+          <p className="text-3xl font-bold text-yellow-300">{formatNumberAr(stats.accepted)}</p>
         </div>
-        <div className="bg-green-500/20 border border-green-500/50 rounded-lg p-4">
-          <p className="text-slate-300 text-sm">Resolved</p>
-          <p className="text-3xl font-bold text-green-300">{stats.resolved}</p>
+        <div className="rounded-lg border border-green-500/50 bg-green-500/20 p-4 text-right">
+          <p className="text-sm text-slate-300">{ar.waiterStatus.resolved}</p>
+          <p className="text-3xl font-bold text-green-300">{formatNumberAr(stats.resolved)}</p>
         </div>
       </div>
 
-      {/* Status Filter */}
-      <div className="flex gap-2 flex-wrap">
+      <div className="flex flex-wrap gap-2">
         {(['all', 'new', 'accepted', 'resolved'] as const).map((filter) => (
           <button
             key={filter}
+            type="button"
             onClick={() => setStatusFilter(filter)}
-            className={`px-4 py-2 rounded-lg font-medium transition-colors capitalize ${
+            className={`rounded-lg px-4 py-2 font-medium transition-colors ${
               statusFilter === filter
                 ? 'bg-amber-600 text-white'
                 : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
             }`}
           >
-            {filter === 'all' ? 'All' : filter}
+            {ar.waiterStatus[filter]}
           </button>
         ))}
       </div>
 
-      {/* Loading */}
       {loading && (
-        <div className="bg-slate-800 border border-slate-700 rounded-lg p-12 text-center">
-          <p className="text-slate-400 text-lg">Loading waiter requests...</p>
+        <div className="rounded-lg border border-slate-700 bg-slate-800 p-12 text-center">
+          <p className="text-lg text-slate-400">{ar.loading}</p>
         </div>
       )}
 
-      {/* Requests */}
       {!loading && (
         <div>
-          <div className="mb-4">
-            <p className="text-slate-400 text-sm">
-              Showing <span className="text-amber-600 font-semibold">{requests.length}</span> request(s)
+          <div className="mb-4 text-right">
+            <p className="text-sm text-slate-400">
+              {query ? (
+                <>
+                  <span className="font-semibold text-amber-600">{formatNumberAr(filteredRequests.length)}</span>{' '}
+                  نتيجة للبحث «{query}»
+                </>
+              ) : (
+                <>
+                  عرض{' '}
+                  <span className="font-semibold text-amber-600">{formatNumberAr(requests.length)}</span>{' '}
+                  طلب
+                </>
+              )}
             </p>
           </div>
-          <WaiterRequestCards requests={requests} onSelectRequest={setSelectedRequest} />
+          <WaiterRequestCards requests={filteredRequests} onSelectRequest={setSelectedRequest} />
         </div>
       )}
 
-      {/* Request Details Modal */}
       {selectedRequest && (
         <WaiterRequestDetails
           request={selectedRequest}
@@ -181,16 +204,15 @@ export default function WaiterRequestsPage() {
         />
       )}
 
-      {/* Instructions */}
-      <div className="bg-purple-500/10 border border-purple-500/50 rounded-lg p-6">
-        <h3 className="text-white font-semibold mb-3">📞 How It Works</h3>
-        <ul className="text-purple-200 space-y-2 text-sm">
-          <li>✓ Customers use the QR menu to call for waiter, request bill, or report issues</li>
-          <li>✓ Requests appear here in real-time with audio notification</li>
-          <li>✓ Red pulsing cards indicate NEW requests requiring immediate attention</li>
-          <li>✓ Click any request to view details, accept, and mark as resolved</li>
-          <li>✓ Filter by status to track request progress</li>
-          <li>✓ Auto-refreshes every 10 seconds for real-time updates</li>
+      <div className="rounded-lg border border-purple-500/50 bg-purple-500/10 p-6 text-right">
+        <h3 className="mb-3 font-semibold text-white">📞 كيف يعمل النظام</h3>
+        <ul className="space-y-2 text-sm text-purple-200">
+          <li>✓ يستخدم الزبناء منيو QR لنداء النادل أو طلب الحساب أو الإبلاغ عن مشكلة</li>
+          <li>✓ تظهر الطلبات هنا لحظياً مع إشعار صوتي</li>
+          <li>✓ البطاقات الحمراء النابضة تشير إلى طلبات جديدة تتطلب اهتماماً فورياً</li>
+          <li>✓ انقر على أي طلب لعرض التفاصيل والقبول وتحديده كـ تم الحل</li>
+          <li>✓ صفِّ حسب الحالة لتتبّع تقدّم الطلبات</li>
+          <li>✓ يُحدَّث تلقائياً كل 10 ثوانٍ</li>
         </ul>
       </div>
     </div>

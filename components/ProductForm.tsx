@@ -1,8 +1,9 @@
 'use client';
 
 import { useState } from 'react';
-import { X, Upload } from 'lucide-react';
+import { X } from 'lucide-react';
 import { addProduct, updateProduct } from '@/lib/menu-actions';
+import { ar } from '@/lib/ar';
 
 interface Product {
   id: number;
@@ -52,7 +53,7 @@ export default function ProductForm({ product, onClose, onSuccess }: ProductForm
       onSuccess();
       onClose();
     } catch (err) {
-      setError((err as Error).message || 'Failed to save product');
+      setError((err as Error).message || 'فشل حفظ المنتج');
       console.error(err);
     } finally {
       setLoading(false);
@@ -60,48 +61,46 @@ export default function ProductForm({ product, onClose, onSuccess }: ProductForm
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-slate-800 border border-slate-700 rounded-lg max-w-md w-full">
-        {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-slate-700">
-          <h2 className="text-xl font-semibold text-white">
-            {product ? 'Edit Dish' : 'Add New Dish'}
-          </h2>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+      <div className="w-full max-w-md rounded-lg border border-slate-700 bg-slate-800">
+        <div className="flex items-center justify-between border-b border-slate-700 p-6">
           <button
+            type="button"
             onClick={onClose}
-            className="text-slate-400 hover:text-slate-300 transition-colors"
+            className="text-slate-400 transition-colors hover:text-slate-300"
           >
             <X size={24} />
           </button>
+          <h2 className="text-xl font-semibold text-white">
+            {product ? 'تعديل الطبق' : 'إضافة طبق جديد'}
+          </h2>
         </div>
 
-        {/* Form */}
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4 p-6 text-right">
           {error && (
-            <div className="bg-red-500/20 border border-red-500/50 rounded p-3">
-              <p className="text-red-300 text-sm">{error}</p>
+            <div className="rounded border border-red-500/50 bg-red-500/20 p-3">
+              <p className="text-sm text-red-300">{error}</p>
             </div>
           )}
 
-          {/* Name */}
           <div>
-            <label className="block text-sm font-medium text-slate-300 mb-2">
-              Dish Name *
+            <label className="mb-2 block text-sm font-medium text-slate-300">
+              اسم الطبق *
             </label>
             <input
               type="text"
               required
+              dir="rtl"
               value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              className="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:border-amber-600 transition-colors"
-              placeholder="e.g., Cappuccino"
+              className="w-full rounded-lg border border-slate-600 bg-slate-700 px-4 py-2 text-white transition-colors focus:border-amber-600 focus:outline-none"
+              placeholder="مثال: كابتشينو"
             />
           </div>
 
-          {/* Price */}
           <div>
-            <label className="block text-sm font-medium text-slate-300 mb-2">
-              Price (DH) *
+            <label className="mb-2 block text-sm font-medium text-slate-300">
+              السعر ({ar.dh}) *
             </label>
             <input
               type="number"
@@ -110,69 +109,67 @@ export default function ProductForm({ product, onClose, onSuccess }: ProductForm
               required
               value={formData.price}
               onChange={(e) => setFormData({ ...formData, price: e.target.value })}
-              className="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:border-amber-600 transition-colors"
+              className="w-full rounded-lg border border-slate-600 bg-slate-700 px-4 py-2 text-white transition-colors focus:border-amber-600 focus:outline-none"
               placeholder="0.00"
             />
           </div>
 
-          {/* Category */}
           <div>
-            <label className="block text-sm font-medium text-slate-300 mb-2">
-              Category *
+            <label className="mb-2 block text-sm font-medium text-slate-300">
+              التصنيف *
             </label>
             <select
               required
               value={formData.category}
               onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-              className="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:border-amber-600 transition-colors"
+              className="w-full rounded-lg border border-slate-600 bg-slate-700 px-4 py-2 text-white transition-colors focus:border-amber-600 focus:outline-none"
             >
-              <option value="">Select a category</option>
-              <option value="Coffee">Coffee</option>
-              <option value="Burgers">Burgers</option>
-              <option value="Pizza">Pizza</option>
-              <option value="Salads">Salads</option>
-              <option value="Desserts">Desserts</option>
-              <option value="Drinks">Drinks</option>
+              <option value="">اختر تصنيفاً</option>
+              <option value="Coffee">قهوة</option>
+              <option value="Burgers">برغر</option>
+              <option value="Pizza">بيتزا</option>
+              <option value="Salads">سلطات</option>
+              <option value="Desserts">حلويات</option>
+              <option value="Drinks">مشروبات</option>
             </select>
           </div>
 
-          {/* Image URL */}
           <div>
-            <label className="block text-sm font-medium text-slate-300 mb-2">
-              Image URL
+            <label className="mb-2 block text-sm font-medium text-slate-300">
+              رابط الصورة
             </label>
             <input
               type="url"
+              dir="ltr"
               value={formData.image_url}
               onChange={(e) => setFormData({ ...formData, image_url: e.target.value })}
-              className="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:border-amber-600 transition-colors text-sm"
+              className="w-full rounded-lg border border-slate-600 bg-slate-700 px-4 py-2 text-sm text-white transition-colors focus:border-amber-600 focus:outline-none"
               placeholder="https://example.com/image.jpg"
             />
             {formData.image_url && (
               <img
                 src={formData.image_url}
-                alt="Preview"
-                className="mt-2 w-full h-32 object-cover rounded-lg"
-                onError={() => setError('Invalid image URL')}
+                alt="معاينة"
+                className="mt-2 h-32 w-full rounded-lg object-cover"
+                onError={() => setError('رابط الصورة غير صالح')}
               />
             )}
           </div>
 
-          {/* Actions */}
-          <div className="flex gap-3 pt-4 border-t border-slate-700">
-            <button
-              type="button"
-              onClick={onClose}
-              className="flex-1 px-4 py-2 bg-slate-700 hover:bg-slate-600 text-slate-100 rounded-lg font-medium transition-colors"
-            >
-              Cancel
-            </button>
+          <div className="flex gap-3 border-t border-slate-700 pt-4">
             <button
               type="submit"
               disabled={loading}
-              className="flex-1 px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex-1 rounded-lg bg-amber-600 px-4 py-2 font-medium text-white transition-colors hover:bg-amber-700 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              {loading ? 'Saving...' : product ? 'Update' : 'Add'}
+              {loading ? 'جاري الحفظ...' : product ? 'تحديث' : 'إضافة'}
+            </button>
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex-1 rounded-lg bg-slate-700 px-4 py-2 font-medium text-slate-100 transition-colors hover:bg-slate-600"
+            >
+              {ar.cancel}
             </button>
           </div>
         </form>

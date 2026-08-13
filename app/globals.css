@@ -6,6 +6,16 @@
   color-scheme: dark;
 }
 
+html {
+  overflow-x: hidden;
+}
+
 body {
-  @apply min-h-screen bg-slate-950 text-slate-100 antialiased;
+  @apply min-h-screen overflow-x-hidden bg-slate-950 text-slate-100 antialiased;
+  font-feature-settings: 'kern' 1;
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #475569 #0f172a;
 }

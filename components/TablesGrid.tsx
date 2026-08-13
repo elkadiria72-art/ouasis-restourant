@@ -1,5 +1,7 @@
 'use client';
 
+import { ar, formatNumberAr } from '@/lib/ar';
+
 interface Table {
   id: number;
   table_number: number;
@@ -27,45 +29,40 @@ const statusEmoji = {
 
 export default function TablesGrid({ tables, onSelectTable }: TablesGridProps) {
   return (
-    <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+    <div className="grid grid-cols-2 gap-4 md:grid-cols-4 lg:grid-cols-6">
       {tables.map((table) => (
         <button
           key={table.id}
+          type="button"
           onClick={() => onSelectTable(table)}
-          className={`aspect-square rounded-lg border-2 transition-all hover:shadow-lg hover:shadow-amber-600/20 flex flex-col items-center justify-center p-3 text-center group ${
+          className={`group flex aspect-square flex-col items-center justify-center rounded-lg border-2 p-3 text-center transition-all hover:shadow-lg hover:shadow-amber-600/20 ${
             statusColors[table.status]
           }`}
         >
-          {/* Status Indicator */}
-          <span className="text-2xl mb-2">{statusEmoji[table.status]}</span>
+          <span className="mb-2 text-2xl">{statusEmoji[table.status]}</span>
 
-          {/* Table Number */}
-          <p className="text-lg font-bold text-white mb-1">
-            Table {String(table.table_number).padStart(2, '0')}
+          <p className="mb-1 text-lg font-bold text-white">
+            طاولة {String(table.table_number).padStart(2, '0')}
           </p>
 
-          {/* Status Text */}
-          <p className="text-xs text-slate-300 capitalize mb-2">
-            {table.status.replace('_', ' ')}
+          <p className="mb-2 text-xs text-slate-300">
+            {ar.tableStatus[table.status]}
           </p>
 
-          {/* Waiter Call Badge */}
           {table.waiter_call && (
-            <span className="inline-block px-2 py-1 bg-red-600 text-white text-xs font-semibold rounded mt-1">
-              🔔 CALL
+            <span className="mt-1 inline-block rounded bg-red-600 px-2 py-1 text-xs font-semibold text-white">
+              🔔 نداء
             </span>
           )}
 
-          {/* Amount */}
-          {table.current_order_amount && (
-            <p className="text-amber-400 font-semibold text-sm mt-2">
-              {table.current_order_amount} DH
+          {table.current_order_amount ? (
+            <p className="mt-2 text-sm font-semibold text-amber-400">
+              {formatNumberAr(table.current_order_amount)} {ar.dh}
             </p>
-          )}
+          ) : null}
 
-          {/* Click hint */}
-          <div className="text-xs text-slate-400 mt-2 group-hover:text-amber-600 transition-colors">
-            Click for details
+          <div className="mt-2 text-xs text-slate-400 transition-colors group-hover:text-amber-600">
+            انقر للتفاصيل
           </div>
         </button>
       ))}

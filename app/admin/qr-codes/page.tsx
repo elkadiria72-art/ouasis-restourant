@@ -1,9 +1,10 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Zap, AlertCircle, RefreshCw } from 'lucide-react';
+import { Zap, AlertCircle } from 'lucide-react';
 import QRCodesGrid from '@/components/QRCodesGrid';
-import { fetchQRCodes, generateAllQRCodes, generateQRCode } from '@/lib/qr-actions';
+import { fetchQRCodes, fetchTablesCount, generateAllQRCodes, generateQRCode } from '@/lib/qr-actions';
+import { ar, formatNumberAr } from '@/lib/ar';
 
 interface QRCode {
   id?: number;
@@ -15,6 +16,7 @@ interface QRCode {
 
 export default function QRCodesPage() {
   const [qrCodes, setQRCodes] = useState<QRCode[]>([]);
+  const [tablesCount, setTablesCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [generating, setGenerating] = useState(false);
@@ -23,10 +25,11 @@ export default function QRCodesPage() {
     try {
       setLoading(true);
       setError(null);
-      const data = await fetchQRCodes();
+      const [data, count] = await Promise.all([fetchQRCodes(), fetchTablesCount()]);
       setQRCodes(data || []);
+      setTablesCount(count);
     } catch (err) {
-      setError((err as Error).message || 'Failed to load QR codes');
+      setError((err as Error).message || 'فشل تحميل رموز QR');
       console.error(err);
     } finally {
       setLoading(false);
@@ -38,7 +41,12 @@ export default function QRCodesPage() {
   }, []);
 
   const handleGenerateAll = async () => {
-    if (!window.confirm('Generate QR codes for all 50 tables?')) return;
+    if (
+      !window.confirm(
+        `إنشاء رموز QR لجميع الطاولات (${formatNumberAr(tablesCount)} طاولة)؟`
+      )
+    )
+      return;
 
     setGenerating(true);
     setError(null);
@@ -47,7 +55,7 @@ export default function QRCodesPage() {
       await generateAllQRCodes();
       await loadQRCodes();
     } catch (err) {
-      setError((err as Error).message || 'Failed to generate QR codes');
+      setError((err as Error).message || 'فشل إنشاء رموز QR');
       console.error(err);
     } finally {
       setGenerating(false);
@@ -55,6 +63,8 @@ export default function QRCodesPage() {
   };
 
   const handleRegenerate = async (tableId: number, tableNumber: number) => {
+    if (!window.confirm(`إعادة إنشاء رمز QR للطاولة ${tableNumber}؟`)) return;
+
     setGenerating(true);
     setError(null);
 
@@ -62,63 +72,64 @@ export default function QRCodesPage() {
       await generateQRCode(tableId, tableNumber);
       await loadQRCodes();
     } catch (err) {
-      setError((err as Error).message || 'Failed to regenerate QR code');
+      setError((err as Error).message || 'فشل إعادة إنشاء رمز QR');
       console.error(err);
     } finally {
       setGenerating(false);
     }
   };
 
+  const progress =
+    tablesCount > 0 ? Math.round((qrCodes.length / tablesCount) * 100) : 0;
+
   return (
     <div className="space-y-8">
-      {/* Header */}
-      <div className="flex items-center justify-between flex-wrap gap-4">
-        <div>
-          <h1 className="text-3xl font-bold text-white">QR Codes Management</h1>
-          <p className="text-slate-400 mt-1">Generate, download, and print QR codes for all tables.</p>
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <div className="text-right">
+          <h1 className="text-2xl font-bold text-white sm:text-3xl">إدارة رموز QR</h1>
+          <p className="mt-1 text-sm text-slate-400">
+            أنشئ ونزّل واطبع رموز QR لجميع الطاولات.
+          </p>
         </div>
         <button
+          type="button"
           onClick={handleGenerateAll}
-          disabled={generating}
-          className="flex items-center gap-2 px-6 py-3 bg-amber-600 hover:bg-amber-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+          disabled={generating || tablesCount === 0}
+          className="flex items-center gap-2 whitespace-nowrap rounded-lg bg-amber-600 px-6 py-3 font-medium text-white transition-colors hover:bg-amber-700 disabled:cursor-not-allowed disabled:opacity-50"
         >
           <Zap size={20} />
-          Generate All (50 Tables)
+          إنشاء الكل ({formatNumberAr(tablesCount)} طاولة)
         </button>
       </div>
 
-      {/* Error */}
       {error && (
-        <div className="bg-red-500/20 border border-red-500/50 rounded-lg p-4 flex items-center gap-3">
+        <div className="flex items-center gap-3 rounded-lg border border-red-500/50 bg-red-500/20 p-4">
           <AlertCircle className="text-red-400" size={20} />
           <p className="text-red-300">{error}</p>
         </div>
       )}
 
-      {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="bg-slate-800 border border-slate-700 rounded-lg p-4">
-          <p className="text-slate-400 text-sm">Total QR Codes</p>
-          <p className="text-3xl font-bold text-amber-600">{qrCodes.length}</p>
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+        <div className="rounded-lg border border-slate-700 bg-slate-800 p-4 text-right">
+          <p className="text-sm text-slate-400">إجمالي رموز QR</p>
+          <p className="text-3xl font-bold text-amber-600">{formatNumberAr(qrCodes.length)}</p>
         </div>
-        <div className="bg-slate-800 border border-slate-700 rounded-lg p-4">
-          <p className="text-slate-400 text-sm">Total Tables</p>
-          <p className="text-3xl font-bold text-blue-400">50</p>
+        <div className="rounded-lg border border-slate-700 bg-slate-800 p-4 text-right">
+          <p className="text-sm text-slate-400">إجمالي الطاولات</p>
+          <p className="text-3xl font-bold text-blue-400">{formatNumberAr(tablesCount)}</p>
         </div>
-        <div className="bg-slate-800 border border-slate-700 rounded-lg p-4">
-          <p className="text-slate-400 text-sm">Progress</p>
-          <p className="text-3xl font-bold text-green-400">{Math.round((qrCodes.length / 50) * 100)}%</p>
+        <div className="rounded-lg border border-slate-700 bg-slate-800 p-4 text-right">
+          <p className="text-sm text-slate-400">التقدّم</p>
+          <p className="text-3xl font-bold text-green-400">{formatNumberAr(progress)}%</p>
         </div>
       </div>
 
-      {/* Loading */}
       {loading && (
-        <div className="bg-slate-800 border border-slate-700 rounded-lg p-12 text-center">
-          <p className="text-slate-400 text-lg">Loading QR codes...</p>
+        <div className="rounded-lg border border-slate-700 bg-slate-800 p-12 text-center">
+          <p className="text-lg text-slate-400">{ar.loading}</p>
         </div>
       )}
 
-      {/* QR Codes Grid */}
       {!loading && (
         <QRCodesGrid
           qrCodes={qrCodes}
@@ -128,15 +139,14 @@ export default function QRCodesPage() {
         />
       )}
 
-      {/* Instructions */}
-      <div className="bg-blue-500/10 border border-blue-500/50 rounded-lg p-6">
-        <h3 className="text-white font-semibold mb-3">📋 Instructions</h3>
-        <ul className="text-blue-200 space-y-2 text-sm">
-          <li>✓ Click "Generate All" to create QR codes for all 50 tables at once</li>
-          <li>✓ Each QR code links directly to the customer menu for that table</li>
-          <li>✓ Download as PNG to store digitally or print</li>
-          <li>✓ Use Print to directly print individual QR codes</li>
-          <li>✓ Regenerate to create new QR codes if needed</li>
+      <div className="rounded-lg border border-blue-500/50 bg-blue-500/10 p-6 text-right">
+        <h3 className="mb-3 font-semibold text-white">📋 التعليمات</h3>
+        <ul className="space-y-2 text-sm text-blue-200">
+          <li>✓ انقر «إنشاء الكل» لإنشاء رموز QR لجميع الطاولات دفعة واحدة</li>
+          <li>✓ يربط كل رمز QR مباشرةً بمنيو الزبون لتلك الطاولة</li>
+          <li>✓ نزّل كصورة PNG للحفظ الرقمي أو الطباعة</li>
+          <li>✓ استخدم «طباعة» لطباعة رمز QR فردي مباشرةً</li>
+          <li>✓ استخدم «تجديد» لإنشاء رمز QR جديد عند الحاجة</li>
         </ul>
       </div>
     </div>

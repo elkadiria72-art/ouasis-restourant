@@ -1,9 +1,12 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { AlertCircle } from 'lucide-react';
 import CategoriesManager from '@/components/CategoriesManager';
 import { fetchCategories } from '@/lib/menu-actions';
+import { useAdminSearch } from '@/components/AdminSearchContext';
+import { matchesSearch } from '@/lib/search-utils';
+import { ar } from '@/lib/ar';
 
 interface Category {
   id: number;
@@ -12,6 +15,7 @@ interface Category {
 }
 
 export default function MenuCategoriesPage() {
+  const { query } = useAdminSearch();
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -23,8 +27,7 @@ export default function MenuCategoriesPage() {
       const data = await fetchCategories();
       setCategories(data || []);
     } catch (err) {
-      setError((err as Error).message || 'Failed to load categories');
-      console.error(err);
+      setError((err as Error).message || 'فشل تحميل التصنيفات');
     } finally {
       setLoading(false);
     }
@@ -34,34 +37,36 @@ export default function MenuCategoriesPage() {
     loadCategories();
   }, []);
 
+  const filteredCategories = useMemo(
+    () => categories.filter((c) => matchesSearch(query, c.name, c.id)),
+    [categories, query]
+  );
+
   return (
-    <div className="space-y-8">
-      {/* Header */}
+    <div className="space-y-6 sm:space-y-8">
       <div>
-        <h1 className="text-3xl font-bold text-white">Categories Management</h1>
-        <p className="text-slate-400 mt-1">Organize your menu with categories. Reorder to change how they appear on the QR menu.</p>
+        <h1 className="text-2xl font-bold text-white sm:text-3xl">إدارة التصنيفات</h1>
+        <p className="mt-1 text-sm text-slate-400">
+          نظّم المنيو بالتصنيفات. اسحب لإعادة الترتيب كما يظهر في منيو QR.
+        </p>
       </div>
 
-      {/* Error */}
       {error && (
-        <div className="bg-red-500/20 border border-red-500/50 rounded-lg p-4 flex items-center gap-3">
+        <div className="flex items-center gap-3 rounded-lg border border-red-500/50 bg-red-500/20 p-4">
           <AlertCircle className="text-red-400" size={20} />
-          <div>
-            <p className="text-red-300 font-medium">Error</p>
-            <p className="text-red-300 text-sm">{error}</p>
-          </div>
+          <p className="text-red-300">{error}</p>
         </div>
       )}
 
-      {/* Loading */}
       {loading && (
-        <div className="bg-slate-800 border border-slate-700 rounded-lg p-8 text-center">
-          <p className="text-slate-400">Loading categories...</p>
+        <div className="rounded-lg border border-slate-700 bg-slate-800 p-8 text-center">
+          <p className="text-slate-400">{ar.loading}</p>
         </div>
       )}
 
-      {/* Manager */}
-      {!loading && <CategoriesManager initialCategories={categories} />}
+      {!loading && (
+        <CategoriesManager initialCategories={filteredCategories} />
+      )}
     </div>
   );
 }

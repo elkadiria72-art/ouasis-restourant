@@ -1,11 +1,21 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import StaffForm from '@/components/StaffForm';
 import StaffTable from '@/components/StaffTable';
-import { addStaffMember, fetchStaffMembers, updateStaffRole, updateStaffStatus, type StaffMember } from '@/lib/staff-actions';
+import {
+  addStaffMember,
+  fetchStaffMembers,
+  updateStaffRole,
+  updateStaffStatus,
+  type StaffMember,
+} from '@/lib/staff-actions';
+import { useAdminSearch } from '@/components/AdminSearchContext';
+import { matchesSearch } from '@/lib/search-utils';
+import { ar } from '@/lib/ar';
 
 export default function StaffPage() {
+  const { query } = useAdminSearch();
   const [staff, setStaff] = useState<StaffMember[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -18,7 +28,7 @@ export default function StaffPage() {
       const data = await fetchStaffMembers();
       setStaff(data);
     } catch (err) {
-      setError((err as Error).message || 'Failed to load staff members');
+      setError((err as Error).message || 'فشل تحميل الموظفين');
     } finally {
       setLoading(false);
     }
@@ -28,14 +38,33 @@ export default function StaffPage() {
     loadStaff();
   }, []);
 
-  const handleAddStaff = async (payload: { name: string; role: StaffMember['role']; status: StaffMember['status']; email?: string }) => {
+  const filteredStaff = useMemo(
+    () =>
+      staff.filter((member) =>
+        matchesSearch(
+          query,
+          member.name,
+          member.email,
+          member.role,
+          ar.staffRole[member.role]
+        )
+      ),
+    [staff, query]
+  );
+
+  const handleAddStaff = async (payload: {
+    name: string;
+    role: StaffMember['role'];
+    status: StaffMember['status'];
+    email?: string;
+  }) => {
     try {
       setSubmitting(true);
       setError(null);
       await addStaffMember(payload);
       await loadStaff();
     } catch (err) {
-      setError((err as Error).message || 'Failed to add staff member');
+      setError((err as Error).message || 'فشل إضافة الموظف');
     } finally {
       setSubmitting(false);
     }
@@ -47,7 +76,7 @@ export default function StaffPage() {
       await updateStaffRole(id, role);
       await loadStaff();
     } catch (err) {
-      setError((err as Error).message || 'Failed to update staff role');
+      setError((err as Error).message || 'فشل تحديث دور الموظف');
     }
   };
 
@@ -57,15 +86,15 @@ export default function StaffPage() {
       await updateStaffStatus(id, status);
       await loadStaff();
     } catch (err) {
-      setError((err as Error).message || 'Failed to update staff status');
+      setError((err as Error).message || 'فشل تحديث حالة الموظف');
     }
   };
 
   return (
     <div className="space-y-8">
-      <div>
-        <h1 className="text-3xl font-bold text-white">Staff Management</h1>
-        <p className="mt-1 text-slate-400">Manage team access, roles, and live availability.</p>
+      <div className="text-right">
+        <h1 className="text-2xl font-bold text-white sm:text-3xl">إدارة الموظفين</h1>
+        <p className="mt-1 text-sm text-slate-400">أدر صلاحيات الفريق والأدوار والتوفر لحظياً.</p>
       </div>
 
       {error && (
@@ -78,12 +107,22 @@ export default function StaffPage() {
 
       {loading ? (
         <div className="rounded-xl border border-slate-700 bg-slate-800 p-12 text-center text-slate-400">
-          Loading staff members...
+          {ar.loading}
         </div>
       ) : (
-        <StaffTable staff={staff} onRoleChange={handleRoleChange} onToggleStatus={handleToggleStatus} />
+        <>
+          {query && (
+            <p className="text-sm text-slate-400">
+              {filteredStaff.length} نتيجة للبحث «{query}»
+            </p>
+          )}
+          <StaffTable
+            staff={filteredStaff}
+            onRoleChange={handleRoleChange}
+            onToggleStatus={handleToggleStatus}
+          />
+        </>
       )}
     </div>
   );
 }
-

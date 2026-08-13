@@ -1,57 +1,59 @@
 'use client';
 
 import { TrendingUp } from 'lucide-react';
+import Link from 'next/link';
+import { ar, formatNumberAr } from '@/lib/ar';
 
 interface TopItem {
   id: number;
   name: string;
   sales: number;
   revenue: number;
-  trend: number;
 }
 
 interface TopSellingItemsProps {
-  items?: TopItem[];
+  items: TopItem[];
 }
 
 export default function TopSellingItems({ items }: TopSellingItemsProps) {
-  const defaultItems: TopItem[] = [
-    { id: 1, name: 'Cappuccino', sales: 48, revenue: 576, trend: 12 },
-    { id: 2, name: 'Burger Elkahmed', sales: 35, revenue: 665, trend: 8 },
-    { id: 3, name: 'Pizza Margherita', sales: 28, revenue: 560, trend: -3 },
-    { id: 4, name: 'Iced Tea', sales: 22, revenue: 110, trend: 5 },
-    { id: 5, name: 'Falafel Wrap', sales: 18, revenue: 288, trend: 2 },
-  ];
-
-  const displayItems = items || defaultItems;
-
   return (
-    <div className="bg-slate-800 border border-slate-700 rounded-lg p-6">
-      <div className="flex items-center justify-between mb-6">
-        <h3 className="text-lg font-semibold text-white">Top Selling Items</h3>
+    <div className="rounded-lg border border-slate-700 bg-slate-800 p-4 sm:p-6">
+      <div className="mb-6 flex items-center justify-between">
+        <h3 className="text-lg font-semibold text-white">{ar.dashboard.topSelling}</h3>
         <TrendingUp className="text-amber-600" size={20} />
       </div>
 
-      <div className="space-y-4">
-        {displayItems.map((item) => (
-          <div key={item.id} className="flex items-center justify-between pb-4 border-b border-slate-700 last:pb-0 last:border-0">
-            <div className="flex-1">
-              <p className="font-medium text-white">{item.name}</p>
-              <p className="text-xs text-slate-400 mt-1">{item.sales} sales</p>
+      {items.length === 0 ? (
+        <p className="py-8 text-center text-slate-400">{ar.dashboard.noProducts}</p>
+      ) : (
+        <div className="space-y-4">
+          {items.map((item) => (
+            <div
+              key={item.id}
+              className="flex items-center justify-between border-b border-slate-700 pb-4 last:border-0 last:pb-0"
+            >
+              <div className="min-w-0 flex-1 pe-3">
+                <p className="truncate font-medium text-white">{item.name}</p>
+                <p className="mt-1 text-xs text-slate-400">
+                  {formatNumberAr(item.sales)} مبيعة
+                </p>
+              </div>
+              <div className="text-left">
+                <p className="font-semibold text-amber-600">
+                  {formatNumberAr(item.revenue)} {ar.dh}
+                </p>
+              </div>
             </div>
-            <div className="text-right">
-              <p className="font-semibold text-amber-600">{item.revenue} DH</p>
-              <p className={`text-xs font-medium ${item.trend >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                {item.trend >= 0 ? '+' : ''}{item.trend}%
-              </p>
-            </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
 
-      <button className="w-full mt-6 px-4 py-2 bg-slate-700 hover:bg-slate-600 text-slate-100 rounded-lg text-sm font-medium transition-colors">
-        View Full Report
-      </button>
+      <Link
+        href="/admin/analytics"
+        className="mt-6 block w-full rounded-lg bg-slate-700 px-4 py-2 text-center text-sm font-medium text-slate-100 transition-colors hover:bg-slate-600"
+      >
+        {ar.dashboard.viewAnalytics}
+      </Link>
     </div>
   );
 }

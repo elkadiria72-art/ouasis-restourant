@@ -17,17 +17,17 @@ export interface RestaurantSettings {
 
 export const defaultSettings: RestaurantSettings = {
   id: 'restaurant',
-  restaurant_name: 'Elkahmed Restaurant',
+  restaurant_name: 'مطعم قـا أحمد',
   logo_url: '',
-  description: 'A premium restaurant experience with fresh flavors and warm hospitality.',
+  description: 'تجربة مطعم مميزة بنكهات طازجة وضيافة دافئة.',
   phone: '+212 5 00 00 00 00',
-  address: 'Casablanca, Morocco',
-  working_hours: 'Mon-Sun: 09:00 AM - 11:00 PM',
+  address: 'الدار البيضاء، المغرب',
+  working_hours: 'الإثنين–الأحد: 09:00 – 23:00',
   default_language: 'Arabic',
   currency: 'MAD',
   primary_color: '#C9A227',
   secondary_color: '#F8EED0',
   accent_color: '#F59E0B',
-  qr_text: 'Scan to view our menu',
+  qr_text: 'امسح الرمز لعرض المنيو',
   font_family: 'Inter, sans-serif',
 };

@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { X, Clock, AlertCircle } from 'lucide-react';
 import { updateOrderStatus, cancelOrder } from '@/lib/orders-actions';
+import { ar, formatNumberAr, formatTimeAr } from '@/lib/ar';
 
 interface Order {
   id: number;
@@ -27,14 +28,6 @@ const statusColors = {
   cancelled: 'bg-red-500/20 text-red-300 border-red-500/50',
 };
 
-const statusLabels = {
-  new: 'New Order',
-  preparing: 'Preparing',
-  ready: 'Ready',
-  served: 'Served',
-  cancelled: 'Cancelled',
-};
-
 const statusTransitions: Record<string, string[]> = {
   new: ['preparing', 'cancelled'],
   preparing: ['ready', 'cancelled'],
@@ -43,26 +36,28 @@ const statusTransitions: Record<string, string[]> = {
   cancelled: [],
 };
 
+const statusActionLabels: Record<string, string> = {
+  preparing: 'تحديد كـ قيد التحضير',
+  ready: 'تحديد كـ جاهز',
+  served: 'تحديد كـ تم التقديم',
+  cancelled: 'إلغاء الطلب',
+};
+
 export default function OrderDetails({ order, onClose, onStatusChange }: OrderDetailsProps) {
   const [updating, setUpdating] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  const formatTime = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-  };
 
   const calculateDuration = () => {
     const createdAt = new Date(order.created_at);
     const now = new Date();
     const diffMs = now.getTime() - createdAt.getTime();
     const diffMins = Math.floor(diffMs / 60000);
-    
-    if (diffMins < 1) return 'just now';
-    if (diffMins < 60) return `${diffMins} min ago`;
-    
+
+    if (diffMins < 1) return 'الآن';
+    if (diffMins < 60) return `منذ ${diffMins} دقيقة`;
+
     const diffHours = Math.floor(diffMins / 60);
-    return `${diffHours}h ${diffMins % 60}m ago`;
+    return `منذ ${diffHours} ساعة و${diffMins % 60} دقيقة`;
   };
 
   const handleStatusUpdate = async (newStatus: string) => {
@@ -74,14 +69,14 @@ export default function OrderDetails({ order, onClose, onStatusChange }: OrderDe
       onStatusChange();
       onClose();
     } catch (err) {
-      setError((err as Error).message || 'Failed to update order');
+      setError((err as Error).message || 'فشل تحديث الطلب');
     } finally {
       setUpdating(false);
     }
   };
 
   const handleCancel = async () => {
-    if (!window.confirm('Are you sure you want to cancel this order?')) return;
+    if (!window.confirm('هل أنت متأكد من إلغاء هذا الطلب؟')) return;
 
     setUpdating(true);
     setError(null);
@@ -91,104 +86,102 @@ export default function OrderDetails({ order, onClose, onStatusChange }: OrderDe
       onStatusChange();
       onClose();
     } catch (err) {
-      setError((err as Error).message || 'Failed to cancel order');
+      setError((err as Error).message || 'فشل إلغاء الطلب');
     } finally {
       setUpdating(false);
     }
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-slate-800 border border-slate-700 rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-        {/* Header */}
-        <div className="sticky top-0 bg-slate-800 border-b border-slate-700 flex items-center justify-between p-6">
-          <div>
-            <h2 className="text-2xl font-bold text-white">Order #{order.id}</h2>
-            <p className="text-slate-400 text-sm mt-1">{formatTime(order.created_at)}</p>
-          </div>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+      <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-lg border border-slate-700 bg-slate-800">
+        <div className="sticky top-0 flex items-center justify-between border-b border-slate-700 bg-slate-800 p-6">
           <button
+            type="button"
             onClick={onClose}
-            className="text-slate-400 hover:text-slate-300 transition-colors"
+            className="text-slate-400 transition-colors hover:text-slate-300"
           >
             <X size={28} />
           </button>
+          <div className="text-right">
+            <h2 className="text-2xl font-bold text-white">طلب #{order.id}</h2>
+            <p className="mt-1 text-sm text-slate-400">{formatTimeAr(order.created_at)}</p>
+          </div>
         </div>
 
-        {/* Content */}
-        <div className="p-6 space-y-6">
+        <div className="space-y-6 p-6 text-right">
           {error && (
-            <div className="bg-red-500/20 border border-red-500/50 rounded-lg p-4 flex items-center gap-3">
+            <div className="flex items-center gap-3 rounded-lg border border-red-500/50 bg-red-500/20 p-4">
               <AlertCircle className="text-red-400" size={20} />
               <p className="text-red-300">{error}</p>
             </div>
           )}
 
-          {/* Status & Duration */}
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-            <div className="bg-slate-700/50 rounded-lg p-4">
-              <p className="text-slate-400 text-sm mb-2">Status</p>
+          <div className="grid grid-cols-2 gap-4 md:grid-cols-3">
+            <div className="rounded-lg bg-slate-700/50 p-4">
+              <p className="mb-2 text-sm text-slate-400">الحالة</p>
               <p
-                className={`inline-block px-3 py-1 rounded-lg text-sm font-medium border capitalize ${
+                className={`inline-block rounded-lg border px-3 py-1 text-sm font-medium ${
                   statusColors[order.status]
                 }`}
               >
-                {statusLabels[order.status]}
+                {ar.orderStatus[order.status]}
               </p>
             </div>
 
-            <div className="bg-slate-700/50 rounded-lg p-4">
-              <p className="text-slate-400 text-sm mb-2">Duration</p>
-              <div className="flex items-center gap-2">
+            <div className="rounded-lg bg-slate-700/50 p-4">
+              <p className="mb-2 text-sm text-slate-400">المدة</p>
+              <div className="flex items-center justify-end gap-2">
+                <p className="font-medium text-white">{calculateDuration()}</p>
                 <Clock size={16} className="text-amber-600" />
-                <p className="text-white font-medium">{calculateDuration()}</p>
               </div>
             </div>
 
-            <div className="bg-slate-700/50 rounded-lg p-4">
-              <p className="text-slate-400 text-sm mb-2">Table</p>
-              <p className="text-white font-bold text-2xl">#{order.table_number}</p>
+            <div className="rounded-lg bg-slate-700/50 p-4">
+              <p className="mb-2 text-sm text-slate-400">الطاولة</p>
+              <p className="text-2xl font-bold text-white">#{order.table_number}</p>
             </div>
           </div>
 
-          {/* Items */}
-          <div className="bg-slate-700/50 rounded-lg p-4">
-            <p className="text-slate-300 font-medium mb-3">Items</p>
-            <p className="text-slate-100 whitespace-pre-wrap">{order.items || 'No items details'}</p>
+          <div className="rounded-lg bg-slate-700/50 p-4">
+            <p className="mb-3 font-medium text-slate-300">الأصناف</p>
+            <p className="whitespace-pre-wrap text-slate-100">{order.items || 'لا توجد تفاصيل'}</p>
           </div>
 
-          {/* Total Amount */}
-          <div className="bg-amber-600/20 border border-amber-600/50 rounded-lg p-4">
-            <p className="text-slate-300 font-medium mb-2">Total Amount</p>
-            <p className="text-3xl font-bold text-amber-600">{order.total_amount} DH</p>
+          <div className="rounded-lg border border-amber-600/50 bg-amber-600/20 p-4">
+            <p className="mb-2 font-medium text-slate-300">المبلغ الإجمالي</p>
+            <p className="text-3xl font-bold text-amber-600">
+              {formatNumberAr(order.total_amount)} {ar.dh}
+            </p>
           </div>
 
-          {/* Status Actions */}
           {statusTransitions[order.status].length > 0 && (
-            <div className="bg-slate-700/50 rounded-lg p-4 space-y-3">
-              <p className="text-slate-300 font-medium">Update Status</p>
+            <div className="space-y-3 rounded-lg bg-slate-700/50 p-4">
+              <p className="font-medium text-slate-300">تحديث الحالة</p>
               <div className="grid grid-cols-2 gap-2">
                 {statusTransitions[order.status].map((nextStatus) => (
                   <button
                     key={nextStatus}
+                    type="button"
                     onClick={() => handleStatusUpdate(nextStatus)}
                     disabled={updating}
-                    className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed capitalize"
+                    className="rounded-lg bg-blue-600 px-4 py-2 font-medium text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
                   >
-                    Mark as {nextStatus}
+                    {statusActionLabels[nextStatus] || ar.orderStatus[nextStatus as keyof typeof ar.orderStatus]}
                   </button>
                 ))}
               </div>
             </div>
           )}
 
-          {/* Cancel Button */}
           {order.status !== 'cancelled' && order.status !== 'served' && (
             <button
+              type="button"
               onClick={handleCancel}
               disabled={updating}
-              className="w-full px-4 py-3 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full rounded-lg bg-red-600 px-4 py-3 font-medium text-white transition-colors hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              Cancel Order
+              إلغاء الطلب
             </button>
           )}
         </div>

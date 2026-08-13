@@ -1,238 +1,487 @@
 'use client';
 
+
+
 import { useState, useEffect } from 'react';
+
 import { GripVertical, Pencil, Trash2, Plus, AlertCircle } from 'lucide-react';
+
 import {
+
   fetchCategories,
+
   addCategory,
+
   updateCategory,
+
   deleteCategory,
+
   reorderCategories,
+
 } from '@/lib/menu-actions';
 
+import { ar } from '@/lib/ar';
+
+
+
 interface Category {
+
   id: number;
+
   name: string;
+
   order_index: number;
+
 }
+
+
 
 interface CategoriesManagerProps {
+
   initialCategories: Category[];
+
 }
 
+
+
 export default function CategoriesManager({ initialCategories }: CategoriesManagerProps) {
+
   const [categories, setCategories] = useState<Category[]>(initialCategories);
-  const [loading, setLoading] = useState(false);
+
   const [error, setError] = useState<string | null>(null);
+
   const [editingId, setEditingId] = useState<number | null>(null);
+
   const [editingName, setEditingName] = useState('');
+
   const [newCategoryName, setNewCategoryName] = useState('');
+
   const [draggingId, setDraggingId] = useState<number | null>(null);
 
+
+
+  useEffect(() => {
+
+    setCategories(initialCategories);
+
+  }, [initialCategories]);
+
+
+
+  const [loading, setLoading] = useState(false);
+
+
+
   const handleAddCategory = async (e: React.FormEvent) => {
+
     e.preventDefault();
+
     if (!newCategoryName.trim()) return;
 
+
+
     setLoading(true);
+
     setError(null);
 
+
+
     try {
+
       const maxOrder = Math.max(...categories.map((c) => c.order_index), -1);
+
       await addCategory({
+
         name: newCategoryName,
+
         order_index: maxOrder + 1,
+
       });
 
+
+
       const updated = await fetchCategories();
+
       setCategories(updated);
+
       setNewCategoryName('');
+
     } catch (err) {
-      setError((err as Error).message || 'Failed to add category');
+
+      setError((err as Error).message || 'فشل إضافة التصنيف');
+
     } finally {
+
       setLoading(false);
+
     }
+
   };
+
+
 
   const handleUpdateCategory = async (id: number) => {
+
     if (!editingName.trim()) return;
 
+
+
     setLoading(true);
+
     setError(null);
 
+
+
     try {
+
       await updateCategory(id, { name: editingName });
+
       setCategories(categories.map((c) => (c.id === id ? { ...c, name: editingName } : c)));
+
       setEditingId(null);
+
       setEditingName('');
+
     } catch (err) {
-      setError((err as Error).message || 'Failed to update category');
+
+      setError((err as Error).message || 'فشل تحديث التصنيف');
+
     } finally {
+
       setLoading(false);
+
     }
+
   };
+
+
 
   const handleDeleteCategory = async (id: number) => {
-    if (!window.confirm('Delete this category? Products in this category will not be affected.'))
-      return;
+
+    if (!window.confirm('حذف هذا التصنيف؟ لن تتأثر المنتجات في هذا التصنيف.')) return;
+
+
 
     setLoading(true);
+
     setError(null);
 
+
+
     try {
+
       await deleteCategory(id);
+
       setCategories(categories.filter((c) => c.id !== id));
+
     } catch (err) {
-      setError((err as Error).message || 'Failed to delete category');
+
+      setError((err as Error).message || 'فشل حذف التصنيف');
+
     } finally {
+
       setLoading(false);
+
     }
+
   };
 
+
+
   const handleReorder = async (fromIndex: number, toIndex: number) => {
+
     const newOrder = [...categories];
+
     const [movedItem] = newOrder.splice(fromIndex, 1);
+
     newOrder.splice(toIndex, 0, movedItem);
+
+
 
     setCategories(newOrder);
 
+
+
     try {
+
       const reorderPayload = newOrder.map((cat, idx) => ({
+
         id: cat.id,
+
         order_index: idx,
+
       }));
+
       await reorderCategories(reorderPayload);
+
     } catch (err) {
-      setError((err as Error).message || 'Failed to reorder categories');
-      // Revert to previous order
+
+      setError((err as Error).message || 'فشل إعادة ترتيب التصنيفات');
+
       setCategories(initialCategories);
+
     }
+
   };
 
+
+
   return (
+
     <div className="space-y-6">
+
       {error && (
-        <div className="bg-red-500/20 border border-red-500/50 rounded-lg p-4 flex items-center gap-3">
+
+        <div className="flex items-center gap-3 rounded-lg border border-red-500/50 bg-red-500/20 p-4">
+
           <AlertCircle className="text-red-400" size={20} />
+
           <p className="text-red-300">{error}</p>
+
         </div>
+
       )}
 
-      {/* Add Category Form */}
-      <div className="bg-slate-800 border border-slate-700 rounded-lg p-6">
-        <h3 className="text-lg font-semibold text-white mb-4">Add New Category</h3>
+
+
+      <div className="rounded-lg border border-slate-700 bg-slate-800 p-6">
+
+        <h3 className="mb-4 text-lg font-semibold text-white">إضافة تصنيف</h3>
+
         <form onSubmit={handleAddCategory} className="flex gap-3">
-          <input
-            type="text"
-            value={newCategoryName}
-            onChange={(e) => setNewCategoryName(e.target.value)}
-            placeholder="e.g., Appetizers"
-            className="flex-1 px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:border-amber-600 transition-colors"
-          />
+
           <button
+
             type="submit"
+
             disabled={loading}
-            className="px-6 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+
+            className="flex items-center gap-2 rounded-lg bg-amber-600 px-6 py-2 font-medium text-white transition-colors hover:bg-amber-700 disabled:cursor-not-allowed disabled:opacity-50"
+
           >
+
             <Plus size={18} />
-            Add
+
+            إضافة
+
           </button>
+
+          <input
+
+            type="text"
+
+            dir="rtl"
+
+            value={newCategoryName}
+
+            onChange={(e) => setNewCategoryName(e.target.value)}
+
+            placeholder="مثال: مقبلات"
+
+            className="flex-1 rounded-lg border border-slate-600 bg-slate-700 px-4 py-2 text-white transition-colors focus:border-amber-600 focus:outline-none"
+
+          />
+
         </form>
+
       </div>
 
-      {/* Categories List */}
-      <div className="bg-slate-800 border border-slate-700 rounded-lg overflow-hidden">
-        <div className="p-6 border-b border-slate-700">
-          <h3 className="text-lg font-semibold text-white">Categories ({categories.length})</h3>
-          <p className="text-sm text-slate-400 mt-1">Drag to reorder • Changes sync instantly to database</p>
+
+
+      <div className="overflow-hidden rounded-lg border border-slate-700 bg-slate-800">
+
+        <div className="border-b border-slate-700 p-6 text-right">
+
+          <h3 className="text-lg font-semibold text-white">التصنيفات ({categories.length})</h3>
+
+          <p className="mt-1 text-sm text-slate-400">اسحب لإعادة الترتيب • تُزامَن التغييرات فوراً مع قاعدة البيانات</p>
+
         </div>
+
+
 
         <div className="divide-y divide-slate-700">
-          {categories.length === 0 ? (
-            <div className="p-6 text-center text-slate-400">
-              No categories yet. Create one to get started!
-            </div>
-          ) : (
-            categories.map((category, index) => (
-              <div
-                key={category.id}
-                draggable
-                onDragStart={() => setDraggingId(index)}
-                onDragOver={(e) => e.preventDefault()}
-                onDrop={() => {
-                  if (draggingId !== null && draggingId !== index) {
-                    handleReorder(draggingId, index);
-                  }
-                  setDraggingId(null);
-                }}
-                className={`p-4 flex items-center gap-4 ${
-                  draggingId === index ? 'bg-amber-600/20' : 'hover:bg-slate-700/50'
-                } transition-colors cursor-move`}
-              >
-                {/* Drag Handle */}
-                <GripVertical className="text-slate-500" size={20} />
 
-                {/* Category Info */}
+          {categories.length === 0 ? (
+
+            <div className="p-6 text-center text-slate-400">
+
+              لا توجد تصنيفات بعد. أنشئ تصنيفاً للبدء!
+
+            </div>
+
+          ) : (
+
+            categories.map((category, index) => (
+
+              <div
+
+                key={category.id}
+
+                draggable
+
+                onDragStart={() => setDraggingId(index)}
+
+                onDragOver={(e) => e.preventDefault()}
+
+                onDrop={() => {
+
+                  if (draggingId !== null && draggingId !== index) {
+
+                    handleReorder(draggingId, index);
+
+                  }
+
+                  setDraggingId(null);
+
+                }}
+
+                className={`flex cursor-move items-center gap-4 p-4 ${
+
+                  draggingId === index ? 'bg-amber-600/20' : 'hover:bg-slate-700/50'
+
+                } transition-colors`}
+
+              >
+
+                <div className="flex gap-2">
+
+                  {editingId === category.id ? (
+
+                    <>
+
+                      <button
+
+                        type="button"
+
+                        onClick={() => {
+
+                          setEditingId(null);
+
+                          setEditingName('');
+
+                        }}
+
+                        className="rounded bg-slate-700 px-3 py-1 text-sm font-medium text-slate-300 transition-colors hover:bg-slate-600"
+
+                      >
+
+                        {ar.cancel}
+
+                      </button>
+
+                      <button
+
+                        type="button"
+
+                        onClick={() => handleUpdateCategory(category.id)}
+
+                        disabled={loading}
+
+                        className="rounded bg-green-600 px-3 py-1 text-sm font-medium text-white transition-colors hover:bg-green-700 disabled:opacity-50"
+
+                      >
+
+                        {ar.save}
+
+                      </button>
+
+                    </>
+
+                  ) : (
+
+                    <>
+
+                      <button
+
+                        type="button"
+
+                        onClick={() => handleDeleteCategory(category.id)}
+
+                        className="rounded bg-red-600 p-2 text-white transition-colors hover:bg-red-700"
+
+                      >
+
+                        <Trash2 size={16} />
+
+                      </button>
+
+                      <button
+
+                        type="button"
+
+                        onClick={() => {
+
+                          setEditingId(category.id);
+
+                          setEditingName(category.name);
+
+                        }}
+
+                        className="rounded bg-blue-600 p-2 text-white transition-colors hover:bg-blue-700"
+
+                      >
+
+                        <Pencil size={16} />
+
+                      </button>
+
+                    </>
+
+                  )}
+
+                </div>
+
+
+
                 {editingId === category.id ? (
+
                   <input
+
                     type="text"
+
+                    dir="rtl"
+
                     value={editingName}
+
                     onChange={(e) => setEditingName(e.target.value)}
+
                     autoFocus
-                    className="flex-1 px-3 py-1 bg-slate-700 border border-slate-600 rounded text-white focus:outline-none focus:border-amber-600"
+
+                    className="flex-1 rounded border border-slate-600 bg-slate-700 px-3 py-1 text-white focus:border-amber-600 focus:outline-none"
+
                   />
+
                 ) : (
-                  <div className="flex-1">
-                    <p className="text-white font-medium">{category.name}</p>
-                    <p className="text-xs text-slate-400">Order: {index + 1}</p>
+
+                  <div className="flex-1 text-right">
+
+                    <p className="font-medium text-white">{category.name}</p>
+
+                    <p className="text-xs text-slate-400">الترتيب: {index + 1}</p>
+
                   </div>
+
                 )}
 
-                {/* Actions */}
-                <div className="flex gap-2">
-                  {editingId === category.id ? (
-                    <>
-                      <button
-                        onClick={() => handleUpdateCategory(category.id)}
-                        disabled={loading}
-                        className="px-3 py-1 bg-green-600 hover:bg-green-700 text-white rounded text-sm font-medium transition-colors disabled:opacity-50"
-                      >
-                        Save
-                      </button>
-                      <button
-                        onClick={() => {
-                          setEditingId(null);
-                          setEditingName('');
-                        }}
-                        className="px-3 py-1 bg-slate-700 hover:bg-slate-600 text-slate-300 rounded text-sm font-medium transition-colors"
-                      >
-                        Cancel
-                      </button>
-                    </>
-                  ) : (
-                    <>
-                      <button
-                        onClick={() => {
-                          setEditingId(category.id);
-                          setEditingName(category.name);
-                        }}
-                        className="p-2 bg-blue-600 hover:bg-blue-700 text-white rounded transition-colors"
-                      >
-                        <Pencil size={16} />
-                      </button>
-                      <button
-                        onClick={() => handleDeleteCategory(category.id)}
-                        className="p-2 bg-red-600 hover:bg-red-700 text-white rounded transition-colors"
-                      >
-                        <Trash2 size={16} />
-                      </button>
-                    </>
-                  )}
-                </div>
+
+
+                <GripVertical className="text-slate-500" size={20} />
+
               </div>
+
             ))
+
           )}
+
         </div>
+
       </div>
+
     </div>
+
   );
+
 }
+
+

@@ -12,21 +12,28 @@ import {
   TrendingUp,
   Users,
   Settings,
+  X,
 } from 'lucide-react';
+import { ar } from '@/lib/ar';
 
-export default function AdminSidebar() {
+interface AdminSidebarProps {
+  open: boolean;
+  onNavigate: () => void;
+}
+
+export default function AdminSidebar({ open, onNavigate }: AdminSidebarProps) {
   const pathname = usePathname();
 
   const menuItems = [
-    { href: '/admin', icon: Home, label: 'Dashboard' },
-    { href: '/admin/menu', icon: List, label: 'Menu', hasSublinks: true },
-    { href: '/admin/orders', icon: ShoppingCart, label: 'Orders' },
-    { href: '/admin/tables', icon: Armchair, label: 'Tables' },
-    { href: '/admin/qr', icon: Zap, label: 'QR Codes' },
-    { href: '/admin/waiter-requests', icon: Bell, label: 'Waiter Requests' },
-    { href: '/admin/analytics', icon: TrendingUp, label: 'Analytics' },
-    { href: '/admin/staff', icon: Users, label: 'Staff' },
-    { href: '/admin/settings', icon: Settings, label: 'Settings' },
+    { href: '/admin', icon: Home, label: ar.nav.dashboard },
+    { href: '/admin/menu', icon: List, label: ar.nav.menu, hasSublinks: true },
+    { href: '/admin/orders', icon: ShoppingCart, label: ar.nav.orders },
+    { href: '/admin/tables', icon: Armchair, label: ar.nav.tables },
+    { href: '/admin/qr', icon: Zap, label: ar.nav.qr },
+    { href: '/admin/waiter-requests', icon: Bell, label: ar.nav.waiterRequests },
+    { href: '/admin/analytics', icon: TrendingUp, label: ar.nav.analytics },
+    { href: '/admin/staff', icon: Users, label: ar.nav.staff },
+    { href: '/admin/settings', icon: Settings, label: ar.nav.settings },
   ];
 
   const isActive = (href: string) => {
@@ -35,17 +42,31 @@ export default function AdminSidebar() {
   };
 
   return (
-    <aside className="fixed left-0 top-0 h-screen w-64 bg-slate-900 border-r border-slate-800 flex flex-col overflow-y-auto">
+    <aside
+      className={`fixed top-0 right-0 z-50 flex h-screen w-72 max-w-[85vw] flex-col overflow-y-auto border-l border-slate-800 bg-slate-900 transition-transform duration-300 ease-in-out lg:translate-x-0 ${
+        open ? 'translate-x-0' : 'translate-x-full lg:translate-x-0'
+      }`}
+    >
       {/* Logo */}
-      <div className="px-6 py-6 border-b border-slate-800">
-        <h1 className="text-2xl font-bold text-white">
-          <span className="text-amber-600">E</span>lkahmed
-        </h1>
-        <p className="text-xs text-slate-400 mt-1">Restaurant Admin</p>
+      <div className="flex items-center justify-between border-b border-slate-800 px-6 py-6">
+        <div>
+          <h1 className="text-2xl font-bold text-white">
+            <span className="text-amber-600">قـا</span> أحمد
+          </h1>
+          <p className="mt-1 text-xs text-slate-400">{ar.appSubtitle}</p>
+        </div>
+        <button
+          type="button"
+          onClick={onNavigate}
+          className="rounded-lg p-2 text-slate-400 transition-colors hover:bg-slate-800 hover:text-white lg:hidden"
+          aria-label="إغلاق القائمة"
+        >
+          <X size={22} />
+        </button>
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 px-4 py-6 space-y-2">
+      <nav className="flex-1 space-y-2 px-4 py-6">
         {menuItems.map((item) => {
           const Icon = item.icon;
           const active = isActive(item.href);
@@ -54,7 +75,8 @@ export default function AdminSidebar() {
             <div key={item.href}>
               <Link
                 href={item.href}
-                className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
+                onClick={onNavigate}
+                className={`flex items-center gap-3 rounded-lg px-4 py-3 transition-colors ${
                   active
                     ? 'bg-amber-600 text-white'
                     : 'text-slate-300 hover:bg-slate-800'
@@ -64,20 +86,21 @@ export default function AdminSidebar() {
                 <span className="font-medium">{item.label}</span>
               </Link>
 
-              {/* Sublinks for Menu */}
               {item.hasSublinks && active && (
-                <div className="ml-4 mt-2 space-y-1 border-l border-slate-700 pl-4">
+                <div className="mr-4 mt-2 space-y-1 border-r border-slate-700 pr-4">
                   <Link
                     href="/admin/menu/products"
-                    className="block px-4 py-2 text-sm text-slate-400 hover:text-amber-600 transition-colors"
+                    onClick={onNavigate}
+                    className="block rounded-lg px-4 py-2 text-sm text-slate-400 transition-colors hover:text-amber-500"
                   >
-                    Products
+                    {ar.nav.products}
                   </Link>
                   <Link
                     href="/admin/menu/categories"
-                    className="block px-4 py-2 text-sm text-slate-400 hover:text-amber-600 transition-colors"
+                    onClick={onNavigate}
+                    className="block rounded-lg px-4 py-2 text-sm text-slate-400 transition-colors hover:text-amber-500"
                   >
-                    Categories
+                    {ar.nav.categories}
                   </Link>
                 </div>
               )}
@@ -86,11 +109,8 @@ export default function AdminSidebar() {
         })}
       </nav>
 
-      {/* Footer */}
-      <div className="px-4 py-4 border-t border-slate-800">
-        <p className="text-xs text-slate-500 text-center">
-          © 2024 Elkahmed
-        </p>
+      <div className="border-t border-slate-800 px-4 py-4">
+        <p className="text-center text-xs text-slate-500">© 2024 {ar.appName}</p>
       </div>
     </aside>
   );

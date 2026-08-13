@@ -1,6 +1,7 @@
 'use client';
 
 import { AlertCircle } from 'lucide-react';
+import { ar, formatNumberAr, formatTimeAr } from '@/lib/ar';
 
 interface Order {
   id: number;
@@ -24,76 +25,63 @@ const statusColors = {
   cancelled: 'bg-red-500/20 text-red-300 border-red-500/50',
 };
 
-const statusLabels = {
-  new: 'New Order',
-  preparing: 'Preparing',
-  ready: 'Ready',
-  served: 'Served',
-  cancelled: 'Cancelled',
-};
-
 export default function OrderCards({ orders, onSelectOrder }: OrderCardsProps) {
-  const formatTime = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
-  };
-
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    return date.toLocaleDateString('ar-MA', { month: 'short', day: 'numeric' });
   };
 
   if (orders.length === 0) {
     return (
-      <div className="bg-slate-800 border border-slate-700 rounded-lg p-12 text-center">
+      <div className="rounded-lg border border-slate-700 bg-slate-800 p-12 text-center">
         <AlertCircle className="mx-auto mb-4 text-slate-500" size={32} />
-        <p className="text-slate-400 text-lg">No orders found</p>
+        <p className="text-lg text-slate-400">لا توجد طلبات</p>
       </div>
     );
   }
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+    <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
       {orders.map((order) => (
         <button
           key={order.id}
+          type="button"
           onClick={() => onSelectOrder(order)}
-          className="text-left bg-slate-800 border border-slate-700 rounded-lg p-5 hover:border-amber-600 hover:shadow-lg hover:shadow-amber-600/20 transition-all group"
+          className="group rounded-lg border border-slate-700 bg-slate-800 p-5 text-right transition-all hover:border-amber-600 hover:shadow-lg hover:shadow-amber-600/20"
         >
-          {/* Header */}
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="text-lg font-semibold text-white">Order #{order.id}</h3>
+          <div className="mb-3 flex items-center justify-between">
             <span
-              className={`px-2 py-1 rounded text-xs font-medium border capitalize ${
+              className={`rounded border px-2 py-1 text-xs font-medium ${
                 statusColors[order.status]
               }`}
             >
-              {statusLabels[order.status]}
+              {ar.orderStatus[order.status]}
             </span>
+            <h3 className="text-lg font-semibold text-white">طلب #{order.id}</h3>
           </div>
 
-          {/* Details */}
-          <div className="space-y-2 mb-4">
+          <div className="mb-4 space-y-2">
             <p className="text-sm text-slate-400">
-              <span className="text-slate-300 font-medium">Table:</span> {order.table_number}
+              <span className="font-medium text-slate-300">الطاولة:</span> {order.table_number}
             </p>
-            <p className="text-sm text-slate-400 line-clamp-2">
-              <span className="text-slate-300 font-medium">Items:</span> {order.items || 'N/A'}
+            <p className="line-clamp-2 text-sm text-slate-400">
+              <span className="font-medium text-slate-300">الأصناف:</span>{' '}
+              {order.items || 'غير متوفر'}
             </p>
             <p className="text-sm text-slate-400">
-              <span className="text-slate-300 font-medium">Time:</span>{' '}
-              {formatTime(order.created_at)} • {formatDate(order.created_at)}
+              <span className="font-medium text-slate-300">الوقت:</span>{' '}
+              {formatTimeAr(order.created_at)} • {formatDate(order.created_at)}
             </p>
           </div>
 
-          {/* Total */}
-          <div className="pt-3 border-t border-slate-700">
-            <p className="text-2xl font-bold text-amber-600">{order.total_amount} DH</p>
+          <div className="border-t border-slate-700 pt-3">
+            <p className="text-2xl font-bold text-amber-600">
+              {formatNumberAr(order.total_amount)} {ar.dh}
+            </p>
           </div>
 
-          {/* Hover indicator */}
-          <div className="text-xs text-slate-500 mt-3 group-hover:text-amber-600 transition-colors">
-            Click for details →
+          <div className="mt-3 text-xs text-slate-500 transition-colors group-hover:text-amber-600">
+            ← انقر للتفاصيل
           </div>
         </button>
       ))}
