@@ -6,6 +6,7 @@ interface QRCode {
   id?: number;
   table_id: number;
   table_number: number;
+  qr_data?: string;
   qr_image: string;
   generated_at?: string;
 }
@@ -82,6 +83,16 @@ export default function QRCodesGrid({
             <h3 className="text-lg font-semibold text-white">
               طاولة {String(qrCode.table_number).padStart(2, '0')}
             </h3>
+
+            {qrCode.qr_data && (
+              <p
+                className="truncate px-1 text-xs text-amber-500/90"
+                dir="ltr"
+                title={qrCode.qr_data}
+              >
+                {qrCode.qr_data}
+              </p>
+            )}
 
             {qrCode.generated_at && (
               <p className="text-xs text-slate-400">

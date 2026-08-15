@@ -55,3 +55,44 @@ export async function uploadRestaurantAsset(formData: FormData): Promise<string>
 
   return data.publicUrl;
 }
+
+const MENU_IMAGES_BUCKET = 'menu-images';
+const MENU_IMAGE_MAX_BYTES = 5 * 1024 * 1024;
+
+export async function uploadMenuImage(formData: FormData): Promise<string> {
+  const supabase = getSupabaseClient();
+  const file = formData.get('file');
+
+  if (!(file instanceof File) || file.size === 0) {
+    throw new Error('يرجى اختيار صورة صالحة.');
+  }
+  if (!file.type.startsWith('image/')) {
+    throw new Error('يجب أن يكون الملف صورة.');
+  }
+  if (file.size > MENU_IMAGE_MAX_BYTES) {
+    throw new Error('حجم الصورة أكبر من 5 ميجابايت.');
+  }
+
+  const safeName = file.name.replace(/[^\w.\-]+/g, '_');
+  const path = `products/${Date.now()}-${safeName}`;
+  const buffer = Buffer.from(await file.arrayBuffer());
+
+  const { error: uploadError } = await supabase.storage.from(MENU_IMAGES_BUCKET).upload(path, buffer, {
+    contentType: file.type,
+    upsert: false,
+    cacheControl: '3600',
+  });
+
+  if (uploadError) {
+    throw new Error(
+      `فشل رفع الصورة (${MENU_IMAGES_BUCKET}): ${uploadError.message}. تأكد من أن bucket menu-images عام ومُهيأ للرفع.`
+    );
+  }
+
+  const { data } = supabase.storage.from(MENU_IMAGES_BUCKET).getPublicUrl(path);
+  if (!data?.publicUrl) {
+    throw new Error('تعذر الحصول على رابط الصورة العام.');
+  }
+
+  return data.publicUrl;
+}

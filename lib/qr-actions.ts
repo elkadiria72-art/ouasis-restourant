@@ -4,9 +4,23 @@ import { revalidatePath } from 'next/cache';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import QRCode from 'qrcode';
 import crypto from 'crypto';
+import { buildTableMenuUrl } from '@/lib/menu-url';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+export interface QrGenerationResult {
+  table_id: number;
+  table_number: number;
+  qr_data: string;
+  qr_image: string;
+}
+
+export interface BatchQrResult {
+  generated: number;
+  failed: string[];
+  qrCodes: QrGenerationResult[];
+}
 
 function formatError(error: unknown, fallback: string): string {
   if (error instanceof Error && error.message) return error.message;
@@ -24,16 +38,6 @@ function getSupabase(): SupabaseClient {
   return createClient(supabaseUrl, supabaseAnonKey, {
     auth: { persistSession: false, autoRefreshToken: false },
   });
-}
-
-function getAppBaseUrl(): string {
-  const configured = process.env.NEXT_PUBLIC_APP_URL?.trim();
-  if (configured) return configured.replace(/\/$/, '');
-
-  const vercel = process.env.VERCEL_URL?.trim();
-  if (vercel) return `https://${vercel.replace(/\/$/, '')}`;
-
-  return 'http://localhost:3000';
 }
 
 function generateQrToken(tableId: number, tableNumber: number): string {
@@ -54,17 +58,11 @@ async function ensureQrToken(
   const { error } = await supabase.from('tables').update({ qr_token: token }).eq('id', table.id);
 
   if (error) {
-    // عمود qr_token قد يكون غير موجود — نستخدم الرمز محلياً دون إيقاف التوليد
     if (/qr_token|column/i.test(error.message)) return token;
     throw new Error(`تعذر حفظ رمز الطاولة: ${error.message}`);
   }
 
   return token;
-}
-
-function buildMenuUrl(token: string, tableNumber: number): string {
-  const base = getAppBaseUrl();
-  return `${base}/menu?token=${encodeURIComponent(token)}&table=${tableNumber}`;
 }
 
 async function renderQrDataUrl(qrData: string): Promise<string> {
@@ -94,8 +92,36 @@ async function upsertQrRecord(
   );
 
   if (error) {
-    throw new Error(`تعذر حفظ رمز QR في قاعدة البيانات: ${error.message}`);
+    throw new Error(`تعذر حفظ رمز QR: ${error.message}`);
   }
+}
+
+async function generateQrForTable(
+  supabase: SupabaseClient,
+  table: { id: number; table_number: number; qr_token?: string | null }
+): Promise<QrGenerationResult> {
+  const token = await ensureQrToken(supabase, table);
+  const qrData = buildTableMenuUrl(token);
+  const qrImageUrl = await renderQrDataUrl(qrData);
+
+  await upsertQrRecord(supabase, {
+    table_id: table.id,
+    table_number: table.table_number,
+    qr_data: qrData,
+    qr_image: qrImageUrl,
+  });
+
+  return {
+    table_id: table.id,
+    table_number: table.table_number,
+    qr_data: qrData,
+    qr_image: qrImageUrl,
+  };
+}
+
+function revalidateQrPaths() {
+  revalidatePath('/admin/qr');
+  revalidatePath('/admin/qr-codes');
 }
 
 export async function fetchQRCodes() {
@@ -133,30 +159,19 @@ export async function generateQRCode(tableId: number, tableNumber: number) {
     throw new Error(`تعذر قراءة الطاولة: ${tableError.message}`);
   }
   if (!table) {
-    throw new Error(`الطاولة رقم ${tableNumber} غير موجودة في قاعدة البيانات.`);
+    throw new Error(`الطاولة رقم ${tableNumber} غير موجودة.`);
   }
 
   try {
-    const token = await ensureQrToken(supabase, table);
-    const qrData = buildMenuUrl(token, table.table_number);
-    const qrImageUrl = await renderQrDataUrl(qrData);
-
-    await upsertQrRecord(supabase, {
-      table_id: tableId,
-      table_number: tableNumber,
-      qr_data: qrData,
-      qr_image: qrImageUrl,
-    });
-
-    revalidatePath('/admin/qr');
-    revalidatePath('/admin/qr-codes');
-    return qrImageUrl;
+    const result = await generateQrForTable(supabase, table);
+    revalidateQrPaths();
+    return result.qr_image;
   } catch (err) {
     throw new Error(formatError(err, 'فشل إنشاء رمز QR'));
   }
 }
 
-export async function generateAllQRCodes() {
+export async function generateAllQRCodes(): Promise<BatchQrResult> {
   const supabase = getSupabase();
 
   const { data: tables, error: fetchError } = await supabase
@@ -171,28 +186,13 @@ export async function generateAllQRCodes() {
     throw new Error('لا توجد طاولات في قاعدة البيانات.');
   }
 
-  const qrCodes = [];
+  const qrCodes: QrGenerationResult[] = [];
   const failures: string[] = [];
 
   for (const table of tables) {
     try {
-      const token = await ensureQrToken(supabase, table);
-      const qrData = buildMenuUrl(token, table.table_number);
-      const qrImageUrl = await renderQrDataUrl(qrData);
-
-      await upsertQrRecord(supabase, {
-        table_id: table.id,
-        table_number: table.table_number,
-        qr_data: qrData,
-        qr_image: qrImageUrl,
-      });
-
-      qrCodes.push({
-        table_id: table.id,
-        table_number: table.table_number,
-        qr_data: qrData,
-        qr_image: qrImageUrl,
-      });
+      const result = await generateQrForTable(supabase, table);
+      qrCodes.push(result);
     } catch (err) {
       failures.push(`طاولة ${table.table_number}: ${formatError(err, 'فشل')}`);
     }
@@ -202,14 +202,13 @@ export async function generateAllQRCodes() {
     throw new Error(failures[0] || 'فشل إنشاء جميع رموز QR');
   }
 
-  revalidatePath('/admin/qr');
-  revalidatePath('/admin/qr-codes');
+  revalidateQrPaths();
 
-  if (failures.length) {
-    throw new Error(`تم إنشاء ${qrCodes.length} رمز. أخطاء: ${failures.slice(0, 3).join(' | ')}`);
-  }
-
-  return qrCodes;
+  return {
+    generated: qrCodes.length,
+    failed: failures,
+    qrCodes,
+  };
 }
 
 export async function deleteQRCode(tableId: number) {
@@ -220,6 +219,5 @@ export async function deleteQRCode(tableId: number) {
 
   if (error) throw new Error(formatError(error, 'فشل حذف رمز QR'));
 
-  revalidatePath('/admin/qr');
-  revalidatePath('/admin/qr-codes');
+  revalidateQrPaths();
 }
