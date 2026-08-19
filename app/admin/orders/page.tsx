@@ -11,6 +11,7 @@ import { matchesSearch } from '@/lib/search-utils';
 import { useNotificationSounds } from '@/components/useNotificationSounds';
 import { playSoundUrl } from '@/lib/play-sound';
 import { ar } from '@/lib/ar';
+import { isOnline, loadCachedDataset } from '@/lib/offline-cache';
 
 interface Order {
   id: number;
@@ -36,20 +37,26 @@ export default function OrdersPage() {
 
   const loadOrders = async () => {
     try {
-      setLoading(true);
+      setLoading(orders.length === 0);
       setError(null);
-      const data = await fetchOrders({ dateRange, status: status === 'all' ? undefined : status });
-      const list = data || [];
-      const newOrders = list.filter((o) => o.status === 'new');
+      const cacheKey = `orders:${dateRange}:${status}`;
+      const result = await loadCachedDataset<Order[]>(
+        cacheKey,
+        () => fetchOrders({ dateRange, status: status === 'all' ? undefined : status }),
+        (cached) => {
+          setOrders(cached.data || []);
+          setLoading(false);
+        }
+      );
+      const list = result.data || [];
+      const newOrders = list.filter((order) => order.status === 'new');
 
       if (!isInitialLoad.current) {
-        const hasFreshNew = newOrders.some((o) => !knownNewOrderIds.current.has(o.id));
-        if (hasFreshNew) {
-          void playSoundUrl(newOrderSoundUrl);
-        }
+        const hasFreshNew = newOrders.some((order) => !knownNewOrderIds.current.has(order.id));
+        if (hasFreshNew) void playSoundUrl(newOrderSoundUrl);
       }
 
-      knownNewOrderIds.current = new Set(newOrders.map((o) => o.id));
+      knownNewOrderIds.current = new Set(newOrders.map((order) => order.id));
       isInitialLoad.current = false;
       setOrders(list);
     } catch (err) {
@@ -58,7 +65,6 @@ export default function OrdersPage() {
       setLoading(false);
     }
   };
-
   const handleRefresh = async () => {
     setRefreshing(true);
     await loadOrders();
@@ -72,8 +78,15 @@ export default function OrdersPage() {
   }, [dateRange, status]);
 
   useEffect(() => {
-    const interval = setInterval(handleRefresh, 30000);
-    return () => clearInterval(interval);
+    const interval = setInterval(() => {
+      if (isOnline()) void handleRefresh();
+    }, 30000);
+    const handleReconnect = () => void loadOrders();
+    window.addEventListener('admin-connection-restored', handleReconnect);
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('admin-connection-restored', handleReconnect);
+    };
   }, [dateRange, status]);
 
   const filteredOrders = useMemo(

@@ -7,6 +7,7 @@ import { fetchCategories } from '@/lib/menu-actions';
 import { useAdminSearch } from '@/components/AdminSearchContext';
 import { matchesSearch } from '@/lib/search-utils';
 import { ar } from '@/lib/ar';
+import { loadCachedDataset } from '@/lib/offline-cache';
 
 interface Category {
   id: number;
@@ -22,10 +23,13 @@ export default function MenuCategoriesPage() {
 
   const loadCategories = async () => {
     try {
-      setLoading(true);
+      setLoading(categories.length === 0);
       setError(null);
-      const data = await fetchCategories();
-      setCategories(data || []);
+      const result = await loadCachedDataset<Category[]>('menu:categories', fetchCategories, (cached) => {
+        setCategories(cached.data || []);
+        setLoading(false);
+      });
+      setCategories(result.data || []);
     } catch (err) {
       setError((err as Error).message || 'فشل تحميل التصنيفات');
     } finally {
@@ -34,7 +38,10 @@ export default function MenuCategoriesPage() {
   };
 
   useEffect(() => {
-    loadCategories();
+    void loadCategories();
+    const handleReconnect = () => void loadCategories();
+    window.addEventListener('admin-connection-restored', handleReconnect);
+    return () => window.removeEventListener('admin-connection-restored', handleReconnect);
   }, []);
 
   const filteredCategories = useMemo(

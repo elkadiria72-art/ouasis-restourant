@@ -7,11 +7,7 @@ import {
   List,
   ShoppingCart,
   Armchair,
-  Zap,
-  Bell,
   TrendingUp,
-  Users,
-  Settings,
   X,
 } from 'lucide-react';
 import { ar } from '@/lib/ar';
@@ -29,11 +25,7 @@ export default function AdminSidebar({ open, onNavigate }: AdminSidebarProps) {
     { href: '/admin/menu', icon: List, label: ar.nav.menu, hasSublinks: true },
     { href: '/admin/orders', icon: ShoppingCart, label: ar.nav.orders },
     { href: '/admin/tables', icon: Armchair, label: ar.nav.tables },
-    { href: '/admin/qr', icon: Zap, label: ar.nav.qr },
-    { href: '/admin/waiter-requests', icon: Bell, label: ar.nav.waiterRequests },
     { href: '/admin/analytics', icon: TrendingUp, label: ar.nav.analytics },
-    { href: '/admin/staff', icon: Users, label: ar.nav.staff },
-    { href: '/admin/settings', icon: Settings, label: ar.nav.settings },
   ];
 
   const isActive = (href: string) => {
@@ -115,3 +107,4 @@ export default function AdminSidebar({ open, onNavigate }: AdminSidebarProps) {
     </aside>
   );
 }
+

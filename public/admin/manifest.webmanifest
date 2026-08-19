@@ -1,0 +1,12 @@
+{
+  "name": "قـا أحمد — لوحة الإدارة",
+  "short_name": "قـا أحمد",
+  "start_url": "/admin",
+  "scope": "/admin/",
+  "display": "standalone",
+  "background_color": "#fcfaf6",
+  "theme_color": "#c9a227",
+  "lang": "ar",
+  "dir": "rtl"
+}
+

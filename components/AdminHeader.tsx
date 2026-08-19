@@ -4,6 +4,7 @@ import { Bell, Menu, User } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { ar, formatRelativeTimeAr } from '@/lib/ar';
 import { useAdminSearch } from '@/components/AdminSearchContext';
+import OfflineConnectionStatus from '@/components/OfflineConnectionStatus';
 import { fetchAdminNotifications } from '@/lib/notifications-actions';
 
 interface AdminHeaderProps {
@@ -62,6 +63,7 @@ export default function AdminHeader({ onMenuClick }: AdminHeaderProps) {
       </div>
 
       <div className="flex shrink-0 items-center gap-2 sm:gap-4">
+        <OfflineConnectionStatus />
         <div className="relative">
           <button
             type="button"
@@ -123,9 +125,6 @@ export default function AdminHeader({ onMenuClick }: AdminHeaderProps) {
               </div>
               <button className="w-full border-b border-slate-700 px-4 py-2 text-right text-sm text-slate-300 transition-colors hover:bg-slate-700">
                 {ar.header.profile}
-              </button>
-              <button className="w-full border-b border-slate-700 px-4 py-2 text-right text-sm text-slate-300 transition-colors hover:bg-slate-700">
-                {ar.header.settings}
               </button>
               <button className="w-full px-4 py-2 text-right text-sm text-red-400 transition-colors hover:bg-slate-700">
                 {ar.header.logout}

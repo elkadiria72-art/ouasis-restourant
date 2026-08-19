@@ -8,6 +8,7 @@ import { fetchTables } from '@/lib/tables-actions';
 import { useAdminSearch } from '@/components/AdminSearchContext';
 import { matchesSearch } from '@/lib/search-utils';
 import { ar, formatNumberAr } from '@/lib/ar';
+import { isOnline, loadCachedDataset } from '@/lib/offline-cache';
 
 interface Table {
   id: number;
@@ -28,10 +29,13 @@ export default function TablesPage() {
 
   const loadTables = async () => {
     try {
-      setLoading(true);
+      setLoading(tables.length === 0);
       setError(null);
-      const data = await fetchTables();
-      setTables(data || []);
+      const result = await loadCachedDataset<Table[]>('tables:all', fetchTables, (cached) => {
+        setTables(cached.data || []);
+        setLoading(false);
+      });
+      setTables(result.data || []);
     } catch (err) {
       setError((err as Error).message || 'فشل تحميل الطاولات');
       console.error(err);
@@ -39,7 +43,6 @@ export default function TablesPage() {
       setLoading(false);
     }
   };
-
   const handleRefresh = async () => {
     setRefreshing(true);
     await loadTables();
@@ -51,8 +54,15 @@ export default function TablesPage() {
   }, []);
 
   useEffect(() => {
-    const interval = setInterval(handleRefresh, 10000);
-    return () => clearInterval(interval);
+    const interval = setInterval(() => {
+      if (isOnline()) void handleRefresh();
+    }, 10000);
+    const handleReconnect = () => void loadTables();
+    window.addEventListener('admin-connection-restored', handleReconnect);
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('admin-connection-restored', handleReconnect);
+    };
   }, []);
 
   const filteredTables = useMemo(

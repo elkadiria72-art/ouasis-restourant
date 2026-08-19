@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { TrendingUp, TrendingDown, DollarSign, ShoppingCart, Clock3, Star, Users } from 'lucide-react';
 import { fetchAnalyticsData, type AnalyticsSummary } from '@/lib/analytics-actions';
 import { ar, formatNumberAr } from '@/lib/ar';
+import { loadCachedDataset } from '@/lib/offline-cache';
 
 const statCardClasses = 'rounded-xl border border-slate-700 bg-slate-800 p-5 text-right';
 
@@ -24,9 +25,13 @@ export default function AnalyticsPage() {
   useEffect(() => {
     const load = async () => {
       try {
-        setLoading(true);
-        const data = await fetchAnalyticsData();
-        setAnalytics(data);
+        setLoading(!analytics);
+        setError(null);
+        const result = await loadCachedDataset<AnalyticsSummary>('analytics:summary', fetchAnalyticsData, (cached) => {
+          setAnalytics(cached.data);
+          setLoading(false);
+        });
+        setAnalytics(result.data);
       } catch (err) {
         setError((err as Error).message || 'فشل تحميل التحليلات');
       } finally {
@@ -34,7 +39,10 @@ export default function AnalyticsPage() {
       }
     };
 
-    load();
+    void load();
+    const handleReconnect = () => void load();
+    window.addEventListener('admin-connection-restored', handleReconnect);
+    return () => window.removeEventListener('admin-connection-restored', handleReconnect);
   }, []);
 
   if (loading) {

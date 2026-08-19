@@ -8,6 +8,7 @@ import { fetchProducts } from '@/lib/menu-actions';
 import { useAdminSearch } from '@/components/AdminSearchContext';
 import { matchesSearch } from '@/lib/search-utils';
 import { ar } from '@/lib/ar';
+import { loadCachedDataset } from '@/lib/offline-cache';
 
 interface Product {
   id: number;
@@ -28,10 +29,13 @@ export default function MenuProductsPage() {
 
   const loadProducts = async () => {
     try {
-      setLoading(true);
+      setLoading(products.length === 0);
       setError(null);
-      const data = await fetchProducts();
-      setProducts(data || []);
+      const result = await loadCachedDataset<Product[]>('menu:products', fetchProducts, (cached) => {
+        setProducts(cached.data || []);
+        setLoading(false);
+      });
+      setProducts(result.data || []);
     } catch (err) {
       setError((err as Error).message || 'فشل تحميل المنتجات');
     } finally {
@@ -40,7 +44,10 @@ export default function MenuProductsPage() {
   };
 
   useEffect(() => {
-    loadProducts();
+    void loadProducts();
+    const handleReconnect = () => void loadProducts();
+    window.addEventListener('admin-connection-restored', handleReconnect);
+    return () => window.removeEventListener('admin-connection-restored', handleReconnect);
   }, []);
 
   const filteredProducts = useMemo(
