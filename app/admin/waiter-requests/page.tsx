@@ -9,6 +9,7 @@ import { useAdminSearch } from '@/components/AdminSearchContext';
 import { matchesSearch } from '@/lib/search-utils';
 import { useNotificationSounds } from '@/components/useNotificationSounds';
 import { playSoundUrl } from '@/lib/play-sound';
+import { useAdminRealtime } from '@/components/useAdminRealtime';
 import { ar, formatNumberAr } from '@/lib/ar';
 
 interface WaiterRequest {
@@ -69,10 +70,12 @@ export default function WaiterRequestsPage() {
       setRefreshing(true);
       await loadRequests();
       setRefreshing(false);
-    }, 10000);
+    }, 60000);
 
     return () => clearInterval(interval);
   }, [statusFilter, waiterCallSoundUrl]);
+
+  useAdminRealtime({ onWaiterCallsChange: () => void loadRequests() });
 
   const filteredRequests = useMemo(
     () =>

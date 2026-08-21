@@ -20,9 +20,9 @@ export async function fetchAdminNotifications(): Promise<AdminNotification[]> {
       .order('created_at', { ascending: false })
       .limit(5),
     supabase
-      .from('waiter_requests')
+      .from('waiter_calls')
       .select('id, table_number, created_at, status')
-      .eq('status', 'new')
+      .eq('status', 'pending')
       .order('created_at', { ascending: false })
       .limit(5),
   ]);

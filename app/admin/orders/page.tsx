@@ -10,6 +10,7 @@ import { useAdminSearch } from '@/components/AdminSearchContext';
 import { matchesSearch } from '@/lib/search-utils';
 import { useNotificationSounds } from '@/components/useNotificationSounds';
 import { playSoundUrl } from '@/lib/play-sound';
+import { useAdminRealtime } from '@/components/useAdminRealtime';
 import { ar } from '@/lib/ar';
 import { isOnline, loadCachedDataset } from '@/lib/offline-cache';
 
@@ -80,7 +81,7 @@ export default function OrdersPage() {
   useEffect(() => {
     const interval = setInterval(() => {
       if (isOnline()) void handleRefresh();
-    }, 30000);
+    }, 120000);
     const handleReconnect = () => void loadOrders();
     window.addEventListener('admin-connection-restored', handleReconnect);
     return () => {
@@ -88,6 +89,8 @@ export default function OrdersPage() {
       window.removeEventListener('admin-connection-restored', handleReconnect);
     };
   }, [dateRange, status]);
+
+  useAdminRealtime({ onOrdersChange: () => void loadOrders() });
 
   const filteredOrders = useMemo(
     () =>

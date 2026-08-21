@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { X, Clock, AlertCircle } from 'lucide-react';
 import { updateOrderStatus, cancelOrder } from '@/lib/orders-actions';
 import { ar, formatNumberAr, formatTimeAr } from '@/lib/ar';
+import { formatOrderItems } from '@/lib/order-items';
 
 interface Order {
   id: number;
@@ -145,7 +146,7 @@ export default function OrderDetails({ order, onClose, onStatusChange }: OrderDe
 
           <div className="rounded-lg bg-slate-700/50 p-4">
             <p className="mb-3 font-medium text-slate-300">الأصناف</p>
-            <p className="whitespace-pre-wrap text-slate-100">{order.items || 'لا توجد تفاصيل'}</p>
+            <p className="whitespace-pre-wrap text-slate-100">{formatOrderItems(order.items) || 'لا توجد تفاصيل'}</p>
           </div>
 
           <div className="rounded-lg border border-amber-600/50 bg-amber-600/20 p-4">

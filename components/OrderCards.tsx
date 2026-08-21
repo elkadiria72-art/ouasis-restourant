@@ -2,6 +2,7 @@
 
 import { AlertCircle } from 'lucide-react';
 import { ar, formatNumberAr, formatTimeAr } from '@/lib/ar';
+import { formatOrderItems } from '@/lib/order-items';
 
 interface Order {
   id: number;
@@ -66,7 +67,7 @@ export default function OrderCards({ orders, onSelectOrder }: OrderCardsProps) {
             </p>
             <p className="line-clamp-2 text-sm text-slate-400">
               <span className="font-medium text-slate-300">الأصناف:</span>{' '}
-              {order.items || 'غير متوفر'}
+              {formatOrderItems(order.items) || 'غير متوفر'}
             </p>
             <p className="text-sm text-slate-400">
               <span className="font-medium text-slate-300">الوقت:</span>{' '}

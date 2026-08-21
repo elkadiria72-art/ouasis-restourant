@@ -8,6 +8,7 @@ import { useAdminSearch } from '@/components/AdminSearchContext';
 import { matchesSearch } from '@/lib/search-utils';
 import { ar } from '@/lib/ar';
 import { loadCachedDataset } from '@/lib/offline-cache';
+import { useAdminRealtime } from '@/components/useAdminRealtime';
 
 interface Category {
   id: number;
@@ -43,6 +44,8 @@ export default function MenuCategoriesPage() {
     window.addEventListener('admin-connection-restored', handleReconnect);
     return () => window.removeEventListener('admin-connection-restored', handleReconnect);
   }, []);
+
+  useAdminRealtime({ onCategoriesChange: () => void loadCategories() });
 
   const filteredCategories = useMemo(
     () => categories.filter((c) => matchesSearch(query, c.name, c.id)),

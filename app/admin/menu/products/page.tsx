@@ -9,6 +9,7 @@ import { useAdminSearch } from '@/components/AdminSearchContext';
 import { matchesSearch } from '@/lib/search-utils';
 import { ar } from '@/lib/ar';
 import { loadCachedDataset } from '@/lib/offline-cache';
+import { useAdminRealtime } from '@/components/useAdminRealtime';
 
 interface Product {
   id: number;
@@ -49,6 +50,8 @@ export default function MenuProductsPage() {
     window.addEventListener('admin-connection-restored', handleReconnect);
     return () => window.removeEventListener('admin-connection-restored', handleReconnect);
   }, []);
+
+  useAdminRealtime({ onMenuItemsChange: () => void loadProducts() });
 
   const filteredProducts = useMemo(
     () =>

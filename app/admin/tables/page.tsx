@@ -9,6 +9,7 @@ import { useAdminSearch } from '@/components/AdminSearchContext';
 import { matchesSearch } from '@/lib/search-utils';
 import { ar, formatNumberAr } from '@/lib/ar';
 import { isOnline, loadCachedDataset } from '@/lib/offline-cache';
+import { useAdminRealtime } from '@/components/useAdminRealtime';
 
 interface Table {
   id: number;
@@ -56,7 +57,7 @@ export default function TablesPage() {
   useEffect(() => {
     const interval = setInterval(() => {
       if (isOnline()) void handleRefresh();
-    }, 10000);
+    }, 60000);
     const handleReconnect = () => void loadTables();
     window.addEventListener('admin-connection-restored', handleReconnect);
     return () => {
@@ -64,6 +65,8 @@ export default function TablesPage() {
       window.removeEventListener('admin-connection-restored', handleReconnect);
     };
   }, []);
+
+  useAdminRealtime({ onTablesChange: () => void loadTables(), onOrdersChange: () => void loadTables() });
 
   const filteredTables = useMemo(
     () =>
