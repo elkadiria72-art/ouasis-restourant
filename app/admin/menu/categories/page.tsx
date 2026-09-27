@@ -13,6 +13,8 @@ import { useAdminRealtime } from '@/components/useAdminRealtime';
 interface Category {
   id: number;
   name: string;
+  name_fr?: string | null;
+  name_en?: string | null;
   order_index: number;
 }
 

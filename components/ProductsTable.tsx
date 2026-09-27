@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Pencil, Trash2, AlertCircle } from 'lucide-react';
+import { Pencil, Trash2, AlertCircle, ImageIcon } from 'lucide-react';
 import { toggleProductAvailability, deleteProduct } from '@/lib/menu-actions';
 import { ar, formatNumberAr } from '@/lib/ar';
 
@@ -66,73 +66,70 @@ export default function ProductsTable({ products, onEdit, onRefresh }: ProductsT
         </div>
       )}
 
-      <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+      {/* Compact list layout: small thumbnail + name/category/price/status/actions */}
+      <div className="divide-y divide-slate-700 overflow-hidden rounded-lg border border-slate-700 bg-slate-800">
         {products.map((product) => (
           <div
             key={product.id}
-            className="overflow-hidden rounded-lg border border-slate-700 bg-slate-800 transition-colors hover:border-slate-600"
+            className="flex items-center gap-3 p-3 transition-colors hover:bg-slate-700/40"
+            dir="rtl"
           >
-            <div className="relative aspect-video overflow-hidden bg-slate-900">
+            {/* Small fixed thumbnail (56px) — list-friendly, no big hero images */}
+            <div className="h-14 w-14 shrink-0 overflow-hidden rounded-lg border border-slate-600 bg-slate-900">
               {product.image_url ? (
                 <img
                   src={product.image_url}
                   alt={product.name}
+                  loading="lazy"
                   className="h-full w-full object-cover"
                 />
               ) : (
                 <div className="flex h-full items-center justify-center text-slate-500">
-                  لا توجد صورة
+                  <ImageIcon size={18} />
                 </div>
               )}
-
-              <button
-                type="button"
-                onClick={() => handleToggleAvailability(product)}
-                disabled={toggling === product.id}
-                className={`absolute left-2 top-2 rounded-full border px-3 py-1 text-xs font-medium transition-all ${
-                  product.is_available
-                    ? 'border-green-500/50 bg-green-500/20 text-green-300'
-                    : 'border-red-500/50 bg-red-500/20 text-red-300'
-                } ${toggling === product.id ? 'cursor-not-allowed opacity-50' : 'cursor-pointer hover:bg-opacity-30'}`}
-              >
-                {toggling === product.id
-                  ? '...'
-                  : product.is_available
-                    ? '🟢 متوفر'
-                    : '🔴 غير متوفر'}
-              </button>
             </div>
 
-            <div className="space-y-3 p-4 text-right">
-              <div>
-                <h3 className="text-lg font-semibold text-white">{product.name}</h3>
-                <p className="text-sm text-slate-400">{product.category}</p>
-              </div>
+            <div className="min-w-0 flex-1">
+              <h3 className="truncate font-semibold text-white">{product.name}</h3>
+              <p className="truncate text-xs text-slate-400">{product.category}</p>
+            </div>
 
-              <div className="flex items-center justify-between">
-                <p className="text-2xl font-bold text-amber-600">
-                  {formatNumberAr(product.price)} {ar.dh}
-                </p>
-              </div>
+            <p className="shrink-0 text-lg font-bold text-amber-600">
+              {formatNumberAr(product.price)} <span className="text-xs">{ar.dh}</span>
+            </p>
 
-              <div className="flex gap-2 border-t border-slate-700 pt-2">
-                <button
-                  type="button"
-                  onClick={() => handleDelete(product.id)}
-                  disabled={deleting === product.id}
-                  className="rounded-lg bg-red-600 px-3 py-2 text-sm font-medium text-white transition-colors hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  <Trash2 size={16} />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => onEdit(product)}
-                  className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-blue-600 px-3 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-700"
-                >
-                  <Pencil size={16} />
-                  {ar.edit}
-                </button>
-              </div>
+            <button
+              type="button"
+              onClick={() => handleToggleAvailability(product)}
+              disabled={toggling === product.id}
+              className={`shrink-0 rounded-full border px-3 py-1 text-xs font-medium transition-all ${
+                product.is_available
+                  ? 'border-green-500/50 bg-green-500/20 text-green-300'
+                  : 'border-red-500/50 bg-red-500/20 text-red-300'
+              } ${toggling === product.id ? 'cursor-not-allowed opacity-50' : 'cursor-pointer hover:bg-opacity-30'}`}
+            >
+              {toggling === product.id ? '...' : product.is_available ? '🟢 متوفر' : '🔴 غير متوفر'}
+            </button>
+
+            <div className="flex shrink-0 gap-2">
+              <button
+                type="button"
+                onClick={() => handleDelete(product.id)}
+                disabled={deleting === product.id}
+                aria-label="حذف"
+                className="rounded-lg bg-red-600 p-2 text-white transition-colors hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <Trash2 size={16} />
+              </button>
+              <button
+                type="button"
+                onClick={() => onEdit(product)}
+                aria-label="تعديل"
+                className="rounded-lg bg-blue-600 p-2 text-white transition-colors hover:bg-blue-700"
+              >
+                <Pencil size={16} />
+              </button>
             </div>
           </div>
         ))}

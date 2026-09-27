@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { Plus, AlertCircle } from 'lucide-react';
 import ProductsTable from '@/components/ProductsTable';
 import ProductForm from '@/components/ProductForm';
-import { fetchProducts } from '@/lib/menu-actions';
+import { fetchProducts, fetchCategories } from '@/lib/menu-actions';
 import { useAdminSearch } from '@/components/AdminSearchContext';
 import { matchesSearch } from '@/lib/search-utils';
 import { ar } from '@/lib/ar';
@@ -20,9 +20,21 @@ interface Product {
   is_available: boolean;
 }
 
+interface Category {
+  id: number;
+  name: string;
+  order_index: number;
+  name_fr?: string | null;
+  name_en?: string | null;
+}
+
+const normalizeCategory = (value: string) => value.trim().toLowerCase();
+
 export default function MenuProductsPage() {
   const { query } = useAdminSearch();
   const [products, setProducts] = useState<Product[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [selectedCategory, setSelectedCategory] = useState<string>('ALL');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
@@ -44,22 +56,49 @@ export default function MenuProductsPage() {
     }
   };
 
+  const loadCategories = async () => {
+    try {
+      const rows = await fetchCategories();
+      setCategories((rows as Category[]) || []);
+    } catch {
+      // Category chips are an enhancement; the table still lists products if
+      // the categories table is unavailable.
+      setCategories([]);
+    }
+  };
+
   useEffect(() => {
     void loadProducts();
-    const handleReconnect = () => void loadProducts();
+    void loadCategories();
+    const handleReconnect = () => { void loadProducts(); void loadCategories(); };
     window.addEventListener('admin-connection-restored', handleReconnect);
     return () => window.removeEventListener('admin-connection-restored', handleReconnect);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  useAdminRealtime({ onMenuItemsChange: () => void loadProducts() });
+  useAdminRealtime({ onMenuItemsChange: () => void loadProducts(), onCategoriesChange: () => void loadCategories() });
 
-  const filteredProducts = useMemo(
-    () =>
-      products.filter((p) =>
-        matchesSearch(query, p.name, p.category, p.price, p.id)
-      ),
-    [products, query]
-  );
+  // Real filter chips: categories table first, plus any category string that
+  // exists on products but is missing from the table (legacy data stays visible).
+  const categoryChips = useMemo(() => {
+    const chips: string[] = categories.map((c) => c.name).filter(Boolean);
+    const known = new Set(chips.map(normalizeCategory));
+    for (const product of products) {
+      const name = product.category?.trim();
+      if (name && !known.has(normalizeCategory(name))) {
+        known.add(normalizeCategory(name));
+        chips.push(name);
+      }
+    }
+    return chips;
+  }, [categories, products]);
+
+  const filteredProducts = useMemo(() => {
+    const byCategory = selectedCategory === 'ALL'
+      ? products
+      : products.filter((p) => normalizeCategory(p.category || '') === normalizeCategory(selectedCategory));
+    return byCategory.filter((p) => matchesSearch(query, p.name, p.category, p.price, p.id));
+  }, [products, selectedCategory, query]);
 
   return (
     <div className="space-y-6 sm:space-y-8">
@@ -79,6 +118,39 @@ export default function MenuProductsPage() {
           <Plus size={20} />
           إضافة طبق
         </button>
+      </div>
+
+      {/* Category filter — from the database, synced live */}
+      <div className="flex flex-wrap items-center gap-2" dir="rtl">
+        <button
+          type="button"
+          onClick={() => setSelectedCategory('ALL')}
+          className={`rounded-full border px-4 py-2 text-sm font-medium transition-colors ${
+            selectedCategory === 'ALL'
+              ? 'border-amber-600 bg-amber-600 text-white'
+              : 'border-slate-600 bg-slate-800 text-slate-300 hover:border-amber-600/60 hover:text-amber-400'
+          }`}
+        >
+          الكل ({products.length})
+        </button>
+        {categoryChips.map((name) => {
+          const count = products.filter((p) => normalizeCategory(p.category || '') === normalizeCategory(name)).length;
+          const active = normalizeCategory(selectedCategory) === normalizeCategory(name);
+          return (
+            <button
+              key={name}
+              type="button"
+              onClick={() => setSelectedCategory(name)}
+              className={`rounded-full border px-4 py-2 text-sm font-medium transition-colors ${
+                active
+                  ? 'border-amber-600 bg-amber-600 text-white'
+                  : 'border-slate-600 bg-slate-800 text-slate-300 hover:border-amber-600/60 hover:text-amber-400'
+              }`}
+            >
+              {name} ({count})
+            </button>
+          );
+        })}
       </div>
 
       {error && (

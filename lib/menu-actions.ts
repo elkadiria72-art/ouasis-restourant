@@ -68,25 +68,35 @@ export async function toggleProductAvailability(id: number, isAvailable: boolean
 
 // ============ CATEGORIES ============
 
+// name = Arabic (existing column). name_fr / name_en require the optional
+// translation columns (see migration SQL in the delivery notes); payloads only
+// include them when set, so the app works before and after the migration.
+export type CategoryTranslationPayload = {
+  name: string;
+  order_index?: number;
+  name_fr?: string;
+  name_en?: string;
+};
+
 export async function fetchCategories() {
   const supabase = getSupabase();
   const { data, error } = await supabase
     .from('categories')
     .select('*')
     .order('order_index', { ascending: true });
-  
+
   if (error) throw error;
   return data || [];
 }
 
-export async function addCategory(payload: { name: string; order_index: number }) {
+export async function addCategory(payload: CategoryTranslationPayload) {
   const supabase = getSupabase();
   const { error } = await supabase.from('categories').insert(payload);
   revalidatePath('/admin/menu/categories');
   if (error) throw error;
 }
 
-export async function updateCategory(id: number, payload: any) {
+export async function updateCategory(id: number, payload: Record<string, string | number>) {
   const supabase = getSupabase();
   const { error } = await supabase.from('categories').update(payload).eq('id', id);
   revalidatePath('/admin/menu/categories');

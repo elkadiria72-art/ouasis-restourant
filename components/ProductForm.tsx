@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { ImageIcon, Loader2, X } from 'lucide-react';
-import { addProduct, updateProduct } from '@/lib/menu-actions';
+import { addProduct, updateProduct, fetchCategories } from '@/lib/menu-actions';
 import { uploadMenuImage } from '@/lib/storage-actions';
 import { ar } from '@/lib/ar';
 
@@ -32,6 +32,21 @@ export default function ProductForm({ product, onClose, onSuccess }: ProductForm
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [categories, setCategories] = useState<string[]>([]);
+
+  // Categories come from the database — the hardcoded list is gone. Existing
+  // product category strings stay selectable even if not in the categories table.
+  useEffect(() => {
+    let active = true;
+    fetchCategories()
+      .then((rows) => {
+        if (!active) return;
+        const names = (rows as Array<{ name?: string }>).map((row) => row.name?.trim()).filter((name): name is string => Boolean(name));
+        setCategories([...new Set(names)]);
+      })
+      .catch(() => setCategories([]));
+    return () => { active = false; };
+  }, []);
 
   useEffect(() => {
     return () => {
@@ -163,20 +178,24 @@ export default function ProductForm({ product, onClose, onSuccess }: ProductForm
             <label className="mb-2 block text-sm font-medium text-slate-300">
               التصنيف *
             </label>
-            <select
+            <input
+              type="text"
               required
+              dir="rtl"
+              list="category-options"
               value={formData.category}
               onChange={(e) => setFormData({ ...formData, category: e.target.value })}
               className="w-full rounded-lg border border-slate-600 bg-slate-700 px-4 py-2 text-white transition-colors focus:border-amber-600 focus:outline-none"
-            >
-              <option value="">اختر تصنيفاً</option>
-              <option value="Coffee">قهوة</option>
-              <option value="Burgers">برغر</option>
-              <option value="Pizza">بيتزا</option>
-              <option value="Salads">سلطات</option>
-              <option value="Desserts">حلويات</option>
-              <option value="Drinks">مشروبات</option>
-            </select>
+              placeholder="اختر من القائمة أو اكتب تصنيفاً"
+            />
+            <datalist id="category-options">
+              {categories.map((name) => (
+                <option key={name} value={name} />
+              ))}
+            </datalist>
+            <p className="mt-1 text-xs text-slate-500">
+              التصنيفات من قاعدة البيانات — أضف تصنيفات جديدة من صفحة «إدارة التصنيفات».
+            </p>
           </div>
 
           <div>
